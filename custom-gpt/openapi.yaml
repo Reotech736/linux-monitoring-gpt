@@ -1,0 +1,134 @@
+openapi: 3.1.0
+info:
+  title: Linux Monitoring Diagnostic API
+  description: >-
+    Read-only diagnostic API for the home Linux server. Use it only to retrieve
+    the current status of the allowed host. It does not accept PromQL, shell
+    commands, or arbitrary host IDs.
+  version: 1.0.0
+servers:
+  - url: https://w0kalw0v2k.execute-api.ap-northeast-1.amazonaws.com
+    description: Linux Monitoring GPT PoC API Gateway endpoint
+security:
+  - SharedSecretAuth: []
+paths:
+  /hosts/{host_id}/status:
+    get:
+      operationId: getHostStatus
+      summary: Get the current diagnostic status of the home Linux server
+      description: >-
+        Retrieves the latest AMP-derived status for the one allowed monitoring
+        target. The only supported host ID is home-server.
+      parameters:
+        - name: host_id
+          in: path
+          required: true
+          description: The fixed identifier of the monitored home Linux server.
+          schema:
+            type: string
+            enum:
+              - home-server
+      responses:
+        '200':
+          description: The status response. Missing metrics are represented by null values and alerts.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HostStatus'
+        '401':
+          description: Missing or invalid API shared secret.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: The requested host ID is not allowed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '502':
+          description: AMP could not provide a diagnostic response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  securitySchemes:
+    SharedSecretAuth:
+      type: apiKey
+      in: header
+      name: x-api-key
+      description: Shared secret for the private Linux Monitoring GPT Action.
+  schemas:
+    HostStatus:
+      type: object
+      required:
+        - host
+        - observed_at
+        - reachable
+        - cpu_usage_percent
+        - memory_usage_percent
+        - disk_usage_percent
+        - load_average_5m
+        - uptime_days
+        - alerts
+      properties:
+        host:
+          type: string
+          const: home-server
+        observed_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          description: Timestamp of the latest up metric in UTC.
+        reachable:
+          type: boolean
+          description: True when the latest node-exporter up metric is 1.
+        cpu_usage_percent:
+          type:
+            - number
+            - 'null'
+          format: double
+        memory_usage_percent:
+          type:
+            - number
+            - 'null'
+          format: double
+        disk_usage_percent:
+          type:
+            - number
+            - 'null'
+          format: double
+        load_average_5m:
+          type:
+            - number
+            - 'null'
+          format: double
+        uptime_days:
+          type:
+            - number
+            - 'null'
+          format: double
+        alerts:
+          type: array
+          description: Machine-readable status codes determined by the API.
+          items:
+            type: string
+            enum:
+              - host_unreachable
+              - metrics_unavailable
+              - cpu_usage_high
+              - memory_usage_high
+              - disk_usage_high
+    ErrorResponse:
+      type: object
+      required:
+        - code
+      properties:
+        code:
+          type: string
+          enum:
+            - host_not_found
+            - amp_query_failed

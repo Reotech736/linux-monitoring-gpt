@@ -280,8 +280,8 @@ Codex CLIは、実装前に以下を整理し、重要な選択についてユ�
 
 ### Phase 5: カスタムGPT連携
 
-- Actions用OpenAPIスキーマを作成
-- API認証を設定
+- Actions用OpenAPIスキーマを作成し、`home-server`のstatus APIだけを公開
+- API Key認証で`x-api-key`を設定
 - カスタムGPT用Instructionsを作成
 - 正常、警告、停止、データ欠損の各ケースをテスト
 
