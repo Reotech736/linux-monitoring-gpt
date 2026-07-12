@@ -22,6 +22,9 @@ crash.*.log
 prometheus-data/
 home-agent/data/
 home-agent/prometheus.amp.yml
+local-observability/.env
+local-observability/prometheus-data/
+local-observability/grafana-data/
 *.log
 
 # OS・エディタ

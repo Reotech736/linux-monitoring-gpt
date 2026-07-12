@@ -8,6 +8,8 @@
 
 Phase 2（AMPへの転送）まで完了しています。Node Exporterを`127.0.0.1:9100`でsystemdサービスとして実行し、Docker Compose上のPrometheus Agentが収集したメトリクスを、東京リージョンのAmazon Managed Service for Prometheus（AMP）へ転送しています。AMPのQuery APIで`up{host_id="home-server"}`が`1`になることを確認済みです。
 
+Phase 3（ローカル可視化）まで完了しています。NucBoxG5上の通常PrometheusとGrafanaを使い、Grafanaだけを自宅LANとTailscaleへ公開しています。Prometheus・Node Exporter・Prometheus Agentは公開しません。
+
 最初のマイルストーンは、自宅LinuxサーバのNode ExporterをPrometheus Agentが収集し、Amazon Managed Service for Prometheus（AMP）上で `up` メトリクスを確認することです。
 
 ## 初期構成方針
@@ -34,6 +36,7 @@ Docker（host network）
 | --- | --- |
 | `docs/` | 構成・セットアップ・運用ドキュメント |
 | `home-agent/` | Prometheus AgentのCompose設定とPrometheus設定 |
+| `local-observability/` | ローカルPrometheus・GrafanaのCompose、設定、ダッシュボード |
 | `infrastructure/` | AWSリソースのIaC |
 | `lambda/` | 診断用API Lambdaとテスト |
 | `grafana/dashboards/` | Grafanaダッシュボード定義 |
@@ -48,6 +51,10 @@ Docker（host network）
 AMPへの転送、IAM、料金、IaCの設計方針は [docs/phase2-amp-design.md](docs/phase2-amp-design.md) を参照してください。
 
 Phase 2の具体的な認証、CloudFormation、Agent接続、削除手順は [docs/phase2-deployment.md](docs/phase2-deployment.md) を参照してください。AWSリソースを作成する前に、対象、料金要因、IAM権限、削除方法を確認します。
+
+## Phase 3のローカル可視化
+
+ローカルPrometheus・Grafanaの構成、LAN/Tailscale公開、起動・停止・検証手順は [docs/phase3-local-visualization.md](docs/phase3-local-visualization.md) を参照してください。
 
 ## 進め方
 

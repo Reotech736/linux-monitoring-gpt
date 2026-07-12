@@ -41,7 +41,6 @@ Codex CLIは、作業開始前にこの文書を読み、目的・決定事項�
 
 AWS
   Amazon Managed Service for Prometheus（AMP）
-      ├─ Amazon Managed Grafana（人間向け可視化）
       └─ Lambda（PromQLで問い合わせ、診断用JSONを生成）
               ↑
          API Gateway（HTTPS、認証）
@@ -49,6 +48,10 @@ AWS
          カスタムGPT Actions
               ↓
          LLMが日本語で状態を説明
+
+自宅Linuxサーバ
+  通常Prometheus（ローカル保存・PromQL検索）
+      └─ Grafana（LAN/Tailscale経由の人間向け可視化）
 ```
 
 ### 通信方向に関する重要事項
@@ -67,7 +70,8 @@ AWS
 | 自宅Linux | Node Exporter | CPU、メモリ、ディスク、ロードアベレージ、稼働時間などを`/metrics`で公開 |
 | 自宅Linux | Prometheus Agent | Exporterをpullし、ラベル付与・絞り込みを行ってAMPへ`remote_write` |
 | AWS | AMP | メトリクスの保存、PromQLによる検索 |
-| AWS | Amazon Managed Grafana | AMPをデータソースとしてダッシュボード表示 |
+| 自宅Linux | Local Prometheus | Node Exporterを保存・PromQL検索し、Grafanaへ提供 |
+| 自宅Linux | Grafana | Local Prometheusをデータソースとしてダッシュボード表示。LAN/Tailscaleだけへ公開 |
 | AWS | Lambda | AMPへ限定されたPromQLを実行し、診断用JSONへ整形 |
 | AWS | API Gateway | カスタムGPTから呼び出せるHTTPS APIを提供 |
 | ChatGPT | カスタムGPT Actions | OpenAPIスキーマに基づいて診断用APIを呼び出す |
@@ -223,7 +227,7 @@ Codex CLIは、実装前に以下を整理し、重要な選択についてユ�
 2. 自宅側をDocker Composeで動かすか、systemdで直接動かすか
 3. Prometheus Agentとして何を採用するか
 4. AWSリージョン
-5. AMPとAmazon Managed Grafanaの料金見積もりおよび予算上限
+5. AMPとローカル保存容量の料金・ディスク使用量の見積もりおよび予算上限
 6. メトリクスの収集間隔と保持期間
 7. 最初に送信するメトリクスとラベルの絞り込み
 8. API Gatewayの認証方式
@@ -257,11 +261,12 @@ Codex CLIは、実装前に以下を整理し、重要な選択についてユ�
 - AMP上で`up`などの基本メトリクスを確認
 - 料金と取り込み量を確認
 
-### Phase 3: Grafana可視化
+### Phase 3: ローカルGrafana可視化
 
-- Amazon Managed Grafanaを用意
-- AMPをデータソースとして接続
+- 通常Prometheusをローカルに追加し、Node Exporterを保存・PromQL検索できるようにする
+- ローカルGrafanaを通常Prometheusへ接続する
 - CPU、メモリ、ディスク、稼働状態の最小ダッシュボードを作成
+- GrafanaだけをLAN/Tailscaleへ公開し、PrometheusとExporterは外部公開しない
 
 ### Phase 4: 診断用REST API
 
@@ -321,4 +326,3 @@ PROJECT_BRIEF.mdを読んで、このプロジェクトの目的、決定事項�
 - 破壊的操作やAWSリソース削除は明示的な確認後に行う。
 - 実装と同時にREADMEや構成資料を更新する。
 - PoCでは過剰設計を避け、最初の完了条件を優先する。
-

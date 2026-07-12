@@ -1,0 +1,80 @@
+services:
+  init-prometheus-data:
+    image: prom/prometheus:v3.13.0
+    container_name: linux-monitoring-local-prometheus-data-init
+    user: "0:0"
+    entrypoint:
+      - /bin/chown
+      - -R
+      - "65534:65534"
+      - /prometheus
+    volumes:
+      - ./prometheus-data:/prometheus
+    restart: "no"
+
+  prometheus:
+    image: prom/prometheus:v3.13.0
+    container_name: linux-monitoring-local-prometheus
+    user: "65534:65534"
+    network_mode: host
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=90d
+      - --storage.tsdb.retention.size=10GB
+      - --web.listen-address=172.30.0.1:19091
+    depends_on:
+      init-prometheus-data:
+        condition: service_completed_successfully
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus-data:/prometheus
+    restart: unless-stopped
+
+  init-grafana-data:
+    image: grafana/grafana@sha256:b0ae311af06228bcfd4a620504b653db80f5b91e94dc3dc2a5b7dab202bcde20
+    container_name: linux-monitoring-grafana-data-init
+    user: "0:0"
+    entrypoint:
+      - /bin/chown
+      - -R
+      - "472:472"
+      - /var/lib/grafana
+    volumes:
+      - ./grafana-data:/var/lib/grafana
+    restart: "no"
+
+  grafana:
+    image: grafana/grafana@sha256:b0ae311af06228bcfd4a620504b653db80f5b91e94dc3dc2a5b7dab202bcde20
+    container_name: linux-monitoring-grafana
+    depends_on:
+      init-grafana-data:
+        condition: service_completed_successfully
+      prometheus:
+        condition: service_started
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD must be set in .env}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+    networks:
+      - observability
+    ports:
+      - "${LAN_BIND_IP:?LAN_BIND_IP must be set in .env}:3000:3000"
+      - "${TAILSCALE_BIND_IP:?TAILSCALE_BIND_IP must be set in .env}:3000:3000"
+    volumes:
+      - ./grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    restart: unless-stopped
+
+networks:
+  observability:
+    name: linux-monitoring-observability
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: br-monitoring
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
+          gateway: 172.30.0.1
