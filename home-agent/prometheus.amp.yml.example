@@ -1,0 +1,24 @@
+global:
+  scrape_interval: 30s
+  scrape_timeout: 10s
+  external_labels:
+    environment: home
+    project: linux-monitoring-gpt
+    host_id: home-server
+
+scrape_configs:
+  - job_name: node-exporter
+    static_configs:
+      - targets:
+          - 127.0.0.1:9100
+
+remote_write:
+  - url: https://aps-workspaces.ap-northeast-1.amazonaws.com/workspaces/REPLACE_WITH_WORKSPACE_ID/api/v1/remote_write
+    sigv4:
+      region: ap-northeast-1
+      profile: linux-monitoring-agent
+    write_relabel_configs:
+      - source_labels:
+          - __name__
+        regex: '^(up|node_cpu_seconds_total|node_memory_MemTotal_bytes|node_memory_MemAvailable_bytes|node_filesystem_size_bytes|node_filesystem_avail_bytes|node_load1|node_load5|node_load15|node_boot_time_seconds)$'
+        action: keep

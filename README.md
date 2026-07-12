@@ -6,7 +6,7 @@
 
 ## 現在のステータス
 
-Phase 1（ローカル収集）は完了しています。Node Exporterを`127.0.0.1:9100`でsystemdサービスとして実行し、Docker Compose上のPrometheus Agentが収集できることを確認しました。次はPhase 2として、AWSリソースを作成する前にAMP、IAM、料金、リージョンを設計します。AWSリソースと認証情報はまだありません。
+Phase 2（AMPへの転送）まで完了しています。Node Exporterを`127.0.0.1:9100`でsystemdサービスとして実行し、Docker Compose上のPrometheus Agentが収集したメトリクスを、東京リージョンのAmazon Managed Service for Prometheus（AMP）へ転送しています。AMPのQuery APIで`up{host_id="home-server"}`が`1`になることを確認済みです。
 
 最初のマイルストーンは、自宅LinuxサーバのNode ExporterをPrometheus Agentが収集し、Amazon Managed Service for Prometheus（AMP）上で `up` メトリクスを確認することです。
 
@@ -20,7 +20,7 @@ Linuxホスト（systemd）
 Docker（host network）
   Prometheus Agent
     └─ Node Exporterをscrape
-    └─ 将来AMPへremote_write
+    └─ AMPへremote_write（SigV4署名）
 ```
 
 - Node Exporterはホスト全体を自然に観測できるよう、systemdサービスとして実行します。
@@ -42,6 +42,12 @@ Docker（host network）
 ## Phase 1の設定
 
 ローカル収集の構成と導入・検証手順は [docs/phase1-local-collection.md](docs/phase1-local-collection.md) を参照してください。Prometheus Agentの設定は `home-agent/` にあります。
+
+## Phase 2の設計
+
+AMPへの転送、IAM、料金、IaCの設計方針は [docs/phase2-amp-design.md](docs/phase2-amp-design.md) を参照してください。
+
+Phase 2の具体的な認証、CloudFormation、Agent接続、削除手順は [docs/phase2-deployment.md](docs/phase2-deployment.md) を参照してください。AWSリソースを作成する前に、対象、料金要因、IAM権限、削除方法を確認します。
 
 ## 進め方
 

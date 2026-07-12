@@ -21,9 +21,13 @@ crash.*.log
 # Prometheusの実データ・ローカルログ
 prometheus-data/
 home-agent/data/
+home-agent/prometheus.amp.yml
 *.log
 
 # OS・エディタ
 .DS_Store
 .idea/
 .vscode/
+
+# 一時作業ディレクトリ
+/tmp

@@ -6,7 +6,7 @@ services:
     entrypoint:
       - /bin/chown
       - -R
-      - "65534:65534"
+      - "${AGENT_UID:-65534}:${AGENT_GID:-65534}"
       - /prometheus
     volumes:
       - ./data:/prometheus
@@ -15,6 +15,7 @@ services:
   prometheus-agent:
     image: prom/prometheus:v3.13.0
     container_name: linux-monitoring-prometheus-agent
+    user: "${AGENT_UID:-65534}:${AGENT_GID:-65534}"
     network_mode: host
     command:
       - --agent
@@ -24,7 +25,13 @@ services:
     depends_on:
       init-prometheus-data:
         condition: service_completed_successfully
+    environment:
+      AWS_SDK_LOAD_CONFIG: "1"
+      AWS_SHARED_CREDENTIALS_FILE: /aws/credentials
+      AWS_CONFIG_FILE: /aws/config
     volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ${PROMETHEUS_CONFIG_FILE:-./prometheus.yml}:/etc/prometheus/prometheus.yml:ro
+      - ${AGENT_AWS_CREDENTIALS_FILE:-./credentials.empty}:/aws/credentials:ro
+      - ${AGENT_AWS_CONFIG_FILE:-./config.empty}:/aws/config:ro
       - ./data:/prometheus
     restart: unless-stopped

@@ -1,0 +1,48 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Linux Monitoring GPT PoC - AMP workspace and Agent IAM user
+
+Resources:
+  AmpWorkspace:
+    Type: AWS::APS::Workspace
+    Properties:
+      Alias: linux-monitoring-gpt-poc
+      WorkspaceConfiguration:
+        RetentionPeriodInDays: 180
+      Tags:
+        - Key: Project
+          Value: linux-monitoring-gpt
+        - Key: Environment
+          Value: poc
+        - Key: ManagedBy
+          Value: cloudformation
+
+  AgentUser:
+    Type: AWS::IAM::User
+    Properties:
+      UserName: linux-monitoring-gpt-agent
+      Policies:
+        - PolicyName: amp-remote-write
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: RemoteWriteOnlyToProjectWorkspace
+                Effect: Allow
+                Action: aps:RemoteWrite
+                Resource: !GetAtt AmpWorkspace.Arn
+
+Outputs:
+  WorkspaceId:
+    Description: AMP workspace ID
+    Value: !GetAtt AmpWorkspace.WorkspaceId
+
+  WorkspaceArn:
+    Description: AMP workspace ARN。Agent IAMポリシーはこのworkspaceへのRemoteWriteだけを許可する。
+    Value: !GetAtt AmpWorkspace.Arn
+
+  RemoteWriteEndpoint:
+    Description: Prometheus remote_write URLの先頭部分。末尾にremote_writeを追加して使用する。
+    Value: !GetAtt AmpWorkspace.PrometheusEndpoint
+
+  AgentUserName:
+    Description: Prometheus Agent専用IAMユーザー名。アクセスキーはCloudFormationでは作成しない。
+    Value: !Ref AgentUser
