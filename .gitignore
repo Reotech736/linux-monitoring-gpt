@@ -1,0 +1,29 @@
+# 環境変数・認証情報
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# AWS/SAM/CDKのローカル生成物
+.aws-sam/
+cdk.out/
+
+# Terraformのローカル状態・キャッシュ
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+
+# Prometheusの実データ・ローカルログ
+prometheus-data/
+home-agent/data/
+*.log
+
+# OS・エディタ
+.DS_Store
+.idea/
+.vscode/
