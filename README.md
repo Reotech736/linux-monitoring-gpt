@@ -8,7 +8,7 @@
 
 Phase 2（AMPへの転送）まで完了しています。Node Exporterを`127.0.0.1:9100`でsystemdサービスとして実行し、Docker Compose上のPrometheus Agentが収集したメトリクスを、東京リージョンのAmazon Managed Service for Prometheus（AMP）へ転送しています。AMPのQuery APIで`up{host_id="home-server"}`が`1`になることを確認済みです。
 
-Phase 3（ローカル可視化）まで完了しています。NucBoxG5上の通常PrometheusとGrafanaを使い、Grafanaだけを自宅LANとTailscaleへ公開しています。Prometheus・Node Exporter・Prometheus Agentは公開しません。
+Phase 4（診断API）まで完了しています。NucBoxG5上の通常PrometheusとGrafanaを使い、Grafanaだけを自宅LANとTailscaleへ公開しています。Prometheus・Node Exporter・Prometheus Agentは公開しません。AMPを固定PromQLで照会する読み取り専用APIは、`x-api-key`を検証してからJSONの診断結果を返します。
 
 最初のマイルストーンは、自宅LinuxサーバのNode ExporterをPrometheus Agentが収集し、Amazon Managed Service for Prometheus（AMP）上で `up` メトリクスを確認することです。
 
@@ -55,6 +55,10 @@ Phase 2の具体的な認証、CloudFormation、Agent接続、削除手順は [d
 ## Phase 3のローカル可視化
 
 ローカルPrometheus・Grafanaの構成、LAN/Tailscale公開、起動・停止・検証手順は [docs/phase3-local-visualization.md](docs/phase3-local-visualization.md) を参照してください。
+
+## Phase 4の診断API
+
+AMPを固定PromQLで読み取り、診断用JSONへ整形するAPIの設計・検証・デプロイ手順は [docs/phase4-diagnostic-api.md](docs/phase4-diagnostic-api.md) を参照してください。AWSリソースを作成する前に、SSMの共有シークレット、変更セット、料金要因、IAM権限、削除方法を確認します。
 
 ## 進め方
 

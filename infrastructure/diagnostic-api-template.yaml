@@ -1,0 +1,226 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Linux Monitoring GPT PoC - read-only AMP diagnostic API
+
+Metadata:
+  ResourceTags:
+    Project: linux-monitoring-gpt
+    Environment: poc
+    ManagedBy: cloudformation
+    Component: diagnostic-api
+
+Parameters:
+  AmpWorkspaceArn:
+    Type: String
+    Description: AMP workspace ARN. The status Lambda can query only this workspace.
+  AmpWorkspaceId:
+    Type: String
+    Description: AMP workspace ID used to construct the Prometheus-compatible query endpoint.
+  ApiKeyParameterName:
+    Type: String
+    Description: Existing SSM SecureString parameter name containing the API shared secret.
+    AllowedPattern: '^/[a-zA-Z0-9_./-]+$'
+  AllowedHostId:
+    Type: String
+    Default: home-server
+    Description: The sole host ID exposed by this PoC API.
+
+Resources:
+  DiagnosticApiAccessLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/apigateway/${AWS::StackName}'
+      RetentionInDays: 14
+      Tags:
+        - Key: Project
+          Value: linux-monitoring-gpt
+        - Key: Environment
+          Value: poc
+        - Key: ManagedBy
+          Value: cloudformation
+        - Key: Component
+          Value: diagnostic-api
+
+  StatusFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${AWS::StackName}-status'
+      RetentionInDays: 14
+      Tags:
+        - Key: Project
+          Value: linux-monitoring-gpt
+        - Key: Environment
+          Value: poc
+        - Key: ManagedBy
+          Value: cloudformation
+        - Key: Component
+          Value: diagnostic-api
+
+  AuthorizerFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${AWS::StackName}-authorizer'
+      RetentionInDays: 14
+      Tags:
+        - Key: Project
+          Value: linux-monitoring-gpt
+        - Key: Environment
+          Value: poc
+        - Key: ManagedBy
+          Value: cloudformation
+        - Key: Component
+          Value: diagnostic-api
+
+  DiagnosticHttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: '$default'
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: 5
+        ThrottlingRateLimit: 2
+      AccessLogSettings:
+        DestinationArn: !GetAtt DiagnosticApiAccessLogGroup.Arn
+        Format: '{"requestId":"$context.requestId","routeKey":"$context.routeKey","status":"$context.status","responseLength":"$context.responseLength"}'
+      Tags:
+        Project: linux-monitoring-gpt
+        Environment: poc
+        ManagedBy: cloudformation
+        Component: diagnostic-api
+      Auth:
+        DefaultAuthorizer: SharedSecretAuthorizer
+        Authorizers:
+          SharedSecretAuthorizer:
+            AuthorizerPayloadFormatVersion: '2.0'
+            EnableSimpleResponses: true
+            EnableFunctionDefaultPermissions: true
+            FunctionArn: !GetAtt AuthorizerFunction.Arn
+            Identity:
+              Headers:
+                - x-api-key
+
+  StatusFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Tags:
+        - Key: Project
+          Value: linux-monitoring-gpt
+        - Key: Environment
+          Value: poc
+        - Key: ManagedBy
+          Value: cloudformation
+        - Key: Component
+          Value: diagnostic-api
+      Policies:
+        - PolicyName: query-project-amp-workspace
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: aps:QueryMetrics
+                Resource: !Ref AmpWorkspaceArn
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub '${StatusFunctionLogGroup.Arn}:*'
+
+  AuthorizerFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Tags:
+        - Key: Project
+          Value: linux-monitoring-gpt
+        - Key: Environment
+          Value: poc
+        - Key: ManagedBy
+          Value: cloudformation
+        - Key: Component
+          Value: diagnostic-api
+      Policies:
+        - PolicyName: read-api-shared-secret
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: ssm:GetParameter
+                Resource: !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${ApiKeyParameterName}'
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub '${AuthorizerFunctionLogGroup.Arn}:*'
+
+  StatusFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-status'
+      CodeUri: ../lambda/status_api/
+      Handler: app.lambda_handler
+      Runtime: python3.12
+      Architectures:
+        - x86_64
+      Role: !GetAtt StatusFunctionRole.Arn
+      Timeout: 15
+      MemorySize: 256
+      Tags:
+        Project: linux-monitoring-gpt
+        Environment: poc
+        ManagedBy: cloudformation
+        Component: diagnostic-api
+      Environment:
+        Variables:
+          ALLOWED_HOST_ID: !Ref AllowedHostId
+          AMP_QUERY_ENDPOINT: !Sub 'https://aps-workspaces.${AWS::Region}.amazonaws.com/workspaces/${AmpWorkspaceId}'
+      Events:
+        GetHostStatus:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref DiagnosticHttpApi
+            Path: /hosts/{host_id}/status
+            Method: GET
+
+  AuthorizerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-authorizer'
+      CodeUri: ../lambda/authorizer/
+      Handler: app.lambda_handler
+      Runtime: python3.12
+      Architectures:
+        - x86_64
+      Role: !GetAtt AuthorizerFunctionRole.Arn
+      Timeout: 15
+      MemorySize: 128
+      Tags:
+        Project: linux-monitoring-gpt
+        Environment: poc
+        ManagedBy: cloudformation
+        Component: diagnostic-api
+      Environment:
+        Variables:
+          API_KEY_PARAMETER_NAME: !Ref ApiKeyParameterName
+
+Outputs:
+  ApiUrl:
+    Description: Authenticated status API base URL.
+    Value: !Sub 'https://${DiagnosticHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}'
+  StatusEndpoint:
+    Description: Status API URL for the configured host.
+    Value: !Sub 'https://${DiagnosticHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/hosts/${AllowedHostId}/status'
+  ApiKeyParameterName:
+    Description: SSM SecureString parameter name supplied at deployment.
+    Value: !Ref ApiKeyParameterName

@@ -215,7 +215,7 @@ AWSリソースは、可能な限りIaCで再現可能にする。
 - Terraform
 - AWS CDK
 
-現時点では未決定。ユーザーはCloudFormationとAWS CLIを学習中であるため、Lambda・API Gatewayを扱いやすいAWS SAM / CloudFormationが有力候補。ただし、AMPやAmazon Managed Grafanaを含めた全体の扱いやすさ、削除の安全性、料金確認方法を比較して決定する。
+Phase 4のLambda・API Gatewayには、CloudFormation拡張であるAWS SAMを採用する。AMP workspaceなど既存リソースはCloudFormationで管理し、SAMの変更もCloudFormation変更セットで確認してから実行する。
 
 初期段階でCI/CDは必須としない。まずはローカルから手動で安全にデプロイし、構成が安定してからGitHub Actionsなどを検討する。
 
@@ -223,7 +223,7 @@ AWSリソースは、可能な限りIaCで再現可能にする。
 
 Codex CLIは、実装前に以下を整理し、重要な選択についてユーザーへ確認すること。
 
-1. IaCをAWS SAM / CloudFormation、Terraform、CDKのどれにするか
+1. IaCをAWS SAM / CloudFormation、Terraform、CDKのどれにするか（Phase 4まではAWS SAM / CloudFormationに決定）
 2. 自宅側をDocker Composeで動かすか、systemdで直接動かすか
 3. Prometheus Agentとして何を採用するか
 4. AWSリージョン
@@ -274,7 +274,9 @@ Codex CLIは、実装前に以下を整理し、重要な選択についてユ�
 - 複数クエリの結果を安定したJSONへ整形
 - 単体テストを作成
 - API Gatewayで読み取り専用APIとして公開
-- 認証、入力検証、レート制限、ログ方針を設定
+- `GET /hosts/home-server/status`だけを公開し、任意PromQL・任意ホストを受け付けない
+- SSM Parameter Storeの共有シークレットを読むLambda Authorizerで認証する
+- 入力検証、レート制限、14日保持のログ方針を設定
 
 ### Phase 5: カスタムGPT連携
 

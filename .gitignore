@@ -34,3 +34,6 @@ local-observability/grafana-data/
 
 # 一時作業ディレクトリ
 /tmp
+
+# Pythonのローカル実行キャッシュ
+__pycache__/
