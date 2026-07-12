@@ -6,7 +6,7 @@
 
 ## 現在のステータス
 
-Phase 0（リポジトリ初期化）は完了しています。次はPhase 1として、自宅Linux上でNode ExporterとPrometheus Agentによるローカル収集を検証します。AWSリソース、認証情報、デプロイ済みコンポーネントはまだありません。
+Phase 1（ローカル収集）は完了しています。Node Exporterを`127.0.0.1:9100`でsystemdサービスとして実行し、Docker Compose上のPrometheus Agentが収集できることを確認しました。次はPhase 2として、AWSリソースを作成する前にAMP、IAM、料金、リージョンを設計します。AWSリソースと認証情報はまだありません。
 
 最初のマイルストーンは、自宅LinuxサーバのNode ExporterをPrometheus Agentが収集し、Amazon Managed Service for Prometheus（AMP）上で `up` メトリクスを確認することです。
 
@@ -38,6 +38,10 @@ Docker（host network）
 | `lambda/` | 診断用API Lambdaとテスト |
 | `grafana/dashboards/` | Grafanaダッシュボード定義 |
 | `custom-gpt/` | Actions用OpenAPIスキーマとInstructions |
+
+## Phase 1の設定
+
+ローカル収集の構成と導入・検証手順は [docs/phase1-local-collection.md](docs/phase1-local-collection.md) を参照してください。Prometheus Agentの設定は `home-agent/` にあります。
 
 ## 進め方
 

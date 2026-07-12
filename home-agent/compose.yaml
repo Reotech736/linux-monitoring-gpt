@@ -1,0 +1,30 @@
+services:
+  init-prometheus-data:
+    image: prom/prometheus:v3.13.0
+    container_name: linux-monitoring-prometheus-data-init
+    user: "0:0"
+    entrypoint:
+      - /bin/chown
+      - -R
+      - "65534:65534"
+      - /prometheus
+    volumes:
+      - ./data:/prometheus
+    restart: "no"
+
+  prometheus-agent:
+    image: prom/prometheus:v3.13.0
+    container_name: linux-monitoring-prometheus-agent
+    network_mode: host
+    command:
+      - --agent
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.agent.path=/prometheus
+      - --web.listen-address=127.0.0.1:19090
+    depends_on:
+      init-prometheus-data:
+        condition: service_completed_successfully
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./data:/prometheus
+    restart: unless-stopped
