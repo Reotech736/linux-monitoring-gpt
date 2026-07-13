@@ -24,6 +24,18 @@ Parameters:
     Type: String
     Default: home-server
     Description: The sole host ID exposed by this PoC API.
+  CognitoDomainPrefix:
+    Type: String
+    Description: Globally unique prefix for the Cognito managed login domain.
+    AllowedPattern: '^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$'
+  ChatGptOAuthCallbackUrl:
+    Type: String
+    Default: https://chatgpt.com/aip/g-6a53c4cf774481919948ee509a3e6cda/oauth/callback
+    Description: OAuth callback URL shown by the current Custom GPT editor.
+  ChatOpenAiOAuthCallbackUrl:
+    Type: String
+    Default: https://chat.openai.com/aip/g-6a53c4cf774481919948ee509a3e6cda/oauth/callback
+    Description: Alternate OAuth callback URL documented for Custom GPT Actions.
 
 Resources:
   DiagnosticApiAccessLogGroup:
@@ -87,7 +99,7 @@ Resources:
         ManagedBy: cloudformation
         Component: diagnostic-api
       Auth:
-        DefaultAuthorizer: SharedSecretAuthorizer
+        DefaultAuthorizer: CognitoJwtAuthorizer
         Authorizers:
           SharedSecretAuthorizer:
             AuthorizerPayloadFormatVersion: '2.0'
@@ -97,6 +109,89 @@ Resources:
             Identity:
               Headers:
                 - x-api-key
+          CognitoJwtAuthorizer:
+            AuthorizationScopes:
+              - linux-monitoring/status.read
+            JwtConfiguration:
+              audience:
+                - !Ref CognitoUserPoolClient
+              issuer: !Sub 'https://cognito-idp.${AWS::Region}.amazonaws.com/${CognitoUserPool}'
+            IdentitySource: '$request.header.Authorization'
+
+  CognitoUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub '${AWS::StackName}-users'
+      UsernameAttributes:
+        - email
+      AutoVerifiedAttributes:
+        - email
+      AdminCreateUserConfig:
+        AllowAdminCreateUserOnly: true
+      MfaConfiguration: 'OFF'
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 14
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: true
+          RequireUppercase: true
+          TemporaryPasswordValidityDays: 7
+      UserPoolTags:
+        Project: linux-monitoring-gpt
+        Environment: poc
+        ManagedBy: cloudformation
+        Component: diagnostic-api
+
+  CognitoResourceServer:
+    Type: AWS::Cognito::UserPoolResourceServer
+    Properties:
+      UserPoolId: !Ref CognitoUserPool
+      Identifier: linux-monitoring
+      Name: Linux Monitoring Diagnostic API
+      Scopes:
+        - ScopeName: status.read
+          ScopeDescription: Read the current status of an authorized monitoring host.
+
+  CognitoUserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    DependsOn: CognitoResourceServer
+    Properties:
+      UserPoolId: !Ref CognitoUserPool
+      ClientName: !Sub '${AWS::StackName}-custom-gpt'
+      GenerateSecret: true
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthFlows:
+        - code
+      AllowedOAuthScopes:
+        - openid
+        - linux-monitoring/status.read
+      CallbackURLs:
+        - !Ref ChatGptOAuthCallbackUrl
+        - !Ref ChatOpenAiOAuthCallbackUrl
+      SupportedIdentityProviders:
+        - COGNITO
+      AccessTokenValidity: 1
+      IdTokenValidity: 1
+      TokenValidityUnits:
+        AccessToken: hours
+        IdToken: hours
+      EnableTokenRevocation: true
+      PreventUserExistenceErrors: ENABLED
+
+  CognitoUserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      Domain: !Ref CognitoDomainPrefix
+      ManagedLoginVersion: 2
+      UserPoolId: !Ref CognitoUserPool
+
+  HomeServerViewerGroup:
+    Type: AWS::Cognito::UserPoolGroup
+    Properties:
+      GroupName: monitoring-viewer-home-server
+      Description: Users allowed to view the home-server monitoring status.
+      UserPoolId: !Ref CognitoUserPool
 
   StatusFunctionRole:
     Type: AWS::IAM::Role
@@ -184,6 +279,7 @@ Resources:
       Environment:
         Variables:
           ALLOWED_HOST_ID: !Ref AllowedHostId
+          ALLOWED_COGNITO_GROUP: !Ref HomeServerViewerGroup
           AMP_QUERY_ENDPOINT: !Sub 'https://aps-workspaces.${AWS::Region}.amazonaws.com/workspaces/${AmpWorkspaceId}'
       Events:
         GetHostStatus:
@@ -224,3 +320,21 @@ Outputs:
   ApiKeyParameterName:
     Description: SSM SecureString parameter name supplied at deployment.
     Value: !Ref ApiKeyParameterName
+  CognitoUserPoolId:
+    Description: Cognito User Pool for invited Custom GPT users.
+    Value: !Ref CognitoUserPool
+  CognitoUserPoolClientId:
+    Description: OAuth client ID for the Custom GPT Action.
+    Value: !Ref CognitoUserPoolClient
+  CognitoIssuer:
+    Description: JWT issuer configured on the HTTP API.
+    Value: !Sub 'https://cognito-idp.${AWS::Region}.amazonaws.com/${CognitoUserPool}'
+  CognitoAuthorizationUrl:
+    Description: OAuth authorization URL for the Custom GPT Action.
+    Value: !Sub 'https://${CognitoDomainPrefix}.auth.${AWS::Region}.amazoncognito.com/oauth2/authorize'
+  CognitoTokenUrl:
+    Description: OAuth token URL for the Custom GPT Action.
+    Value: !Sub 'https://${CognitoDomainPrefix}.auth.${AWS::Region}.amazoncognito.com/oauth2/token'
+  CognitoScope:
+    Description: OAuth scope required by the status route.
+    Value: linux-monitoring/status.read

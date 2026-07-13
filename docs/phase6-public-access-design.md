@@ -62,6 +62,8 @@ IaCで次のリソースを作成します。
 
 OpenAIは`https://chat.openai.com/aip/<GPT_ID>/oauth/callback`と`https://chatgpt.com/aip/<GPT_ID>/oauth/callback`の両方をcallback URLとして登録するよう案内しています。GPT IDは現在のGPT URLから確認します。Cognito User Pool ClientのsecretはGit・CloudFormation出力・会話へ保存せず、所有者が取得してGPT Editorだけへ設定します。
 
+このPoCでは、Cognito Domainの候補として`linux-monitoring-gpt-804761969461`を使います。これはグローバルに一意である必要があるCognitoのprefix domainを、AWSアカウントIDで衝突しにくくするためです。アカウントIDは認証情報ではありません。
+
 ## 移行と削除
 
 1. 現行stackを更新してCognito、JWT Authorizer、グループ検証を追加する。

@@ -10,7 +10,8 @@ servers:
   - url: https://w0kalw0v2k.execute-api.ap-northeast-1.amazonaws.com
     description: Linux Monitoring GPT PoC API Gateway endpoint
 security:
-  - SharedSecretAuth: []
+  - CognitoOAuth:
+      - linux-monitoring/status.read
 paths:
   /hosts/{host_id}/status:
     get:
@@ -36,13 +37,19 @@ paths:
               schema:
                 $ref: '#/components/schemas/HostStatus'
         '401':
-          description: Missing or invalid API shared secret.
+          description: Missing or invalid OAuth access token.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: The requested host ID is not allowed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: The signed-in user is not allowed to view this host.
           content:
             application/json:
               schema:
@@ -55,11 +62,14 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
 components:
   securitySchemes:
-    SharedSecretAuth:
-      type: apiKey
-      in: header
-      name: x-api-key
-      description: Shared secret for the private Linux Monitoring GPT Action.
+    CognitoOAuth:
+      type: oauth2
+      flows:
+        authorizationCode:
+          authorizationUrl: https://linux-monitoring-gpt-804761969461.auth.ap-northeast-1.amazoncognito.com/oauth2/authorize
+          tokenUrl: https://linux-monitoring-gpt-804761969461.auth.ap-northeast-1.amazoncognito.com/oauth2/token
+          scopes:
+            linux-monitoring/status.read: Read the current status of an authorized monitoring host.
   schemas:
     HostStatus:
       type: object
@@ -131,4 +141,5 @@ components:
           type: string
           enum:
             - host_not_found
+            - forbidden
             - amp_query_failed

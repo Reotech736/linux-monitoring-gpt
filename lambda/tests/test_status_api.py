@@ -37,10 +37,18 @@ class StatusApiTests(unittest.TestCase):
             "node_load5": 1.24,
             "node_boot_time_seconds": 18.4,
         }
+        self.authorized_event = {
+            "pathParameters": {"host_id": "home-server"},
+            "requestContext": {
+                "authorizer": {
+                    "jwt": {"claims": {"cognito:groups": "monitoring-viewer-home-server"}}
+                }
+            },
+        }
 
     def test_returns_reachable_host_without_alerts(self):
         response = app.lambda_handler(
-            {"pathParameters": {"host_id": "home-server"}}, None, FakeAmpClient(self.values)
+            self.authorized_event, None, FakeAmpClient(self.values)
         )
 
         self.assertEqual(response["statusCode"], 200)
@@ -52,7 +60,7 @@ class StatusApiTests(unittest.TestCase):
     def test_adds_threshold_and_missing_metric_alerts(self):
         values = {**self.values, "node_cpu_seconds_total": 95, "node_filesystem_avail_bytes": None}
         response = app.lambda_handler(
-            {"pathParameters": {"host_id": "home-server"}}, None, FakeAmpClient(values)
+            self.authorized_event, None, FakeAmpClient(values)
         )
 
         body = json.loads(response["body"])
@@ -67,3 +75,25 @@ class StatusApiTests(unittest.TestCase):
 
         self.assertEqual(response["statusCode"], 404)
         self.assertEqual(json.loads(response["body"]), {"code": "host_not_found"})
+
+    def test_rejects_user_outside_the_authorized_group(self):
+        response = app.lambda_handler(
+            {"pathParameters": {"host_id": "home-server"}}, None, FakeAmpClient(self.values)
+        )
+
+        self.assertEqual(response["statusCode"], 403)
+        self.assertEqual(json.loads(response["body"]), {"code": "forbidden"})
+
+    def test_accepts_group_claim_encoded_as_a_json_array(self):
+        event = {
+            "pathParameters": {"host_id": "home-server"},
+            "requestContext": {
+                "authorizer": {
+                    "jwt": {"claims": {"cognito:groups": '["monitoring-viewer-home-server"]'}}
+                }
+            },
+        }
+
+        response = app.lambda_handler(event, None, FakeAmpClient(self.values))
+
+        self.assertEqual(response["statusCode"], 200)

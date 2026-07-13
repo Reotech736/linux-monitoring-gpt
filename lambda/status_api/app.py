@@ -115,6 +115,31 @@ def _observed_at(timestamp: float | None) -> str | None:
     return datetime.fromtimestamp(timestamp, tz=timezone.utc).isoformat().replace("+00:00", "Z")
 
 
+def _claim_groups(event: dict[str, Any]) -> set[str]:
+    """Return Cognito group names from the HTTP API JWT authorizer context."""
+    claims = ((event.get("requestContext") or {}).get("authorizer") or {}).get("jwt", {}).get("claims")
+    if not isinstance(claims, dict):
+        return set()
+    groups = claims.get("cognito:groups")
+    if isinstance(groups, str):
+        if groups.startswith("["):
+            try:
+                parsed_groups = json.loads(groups)
+            except json.JSONDecodeError:
+                parsed_groups = None
+            if isinstance(parsed_groups, list):
+                return {group for group in parsed_groups if isinstance(group, str)}
+        return {group.strip() for group in groups.split(",") if group.strip()}
+    if isinstance(groups, list):
+        return {group for group in groups if isinstance(group, str)}
+    return set()
+
+
+def _is_allowed_viewer(event: dict[str, Any]) -> bool:
+    required_group = os.environ.get("ALLOWED_COGNITO_GROUP", "monitoring-viewer-home-server")
+    return required_group in _claim_groups(event)
+
+
 def build_status(host_id: str, client: QueryClient) -> dict[str, Any]:
     """Run fixed queries and turn their vector results into the public response."""
     values: dict[str, float | None] = {}
@@ -159,6 +184,8 @@ def lambda_handler(event: dict[str, Any], _context: Any, client: QueryClient | N
     allowed_host_id = os.environ.get("ALLOWED_HOST_ID", "home-server")
     if host_id != allowed_host_id:
         return _response(404, {"code": "host_not_found"})
+    if not _is_allowed_viewer(event):
+        return _response(403, {"code": "forbidden"})
 
     try:
         query_client = client or AmpQueryClient(
