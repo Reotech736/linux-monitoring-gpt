@@ -34,8 +34,8 @@ Parameters:
     Description: OAuth callback URL shown by the current Custom GPT editor.
   ChatOpenAiOAuthCallbackUrl:
     Type: String
-    Default: https://chat.openai.com/aip/g-6a53c4cf774481919948ee509a3e6cda/oauth/callback
-    Description: Alternate OAuth callback URL documented for Custom GPT Actions.
+    Default: https://chat.openai.com/aip/g-dac59ac80a89de112cd3c275aaa616575e5f5072/oauth/callback
+    Description: OAuth callback URL shown by the current Custom GPT editor.
 
 Resources:
   DiagnosticApiAccessLogGroup:

@@ -61,7 +61,7 @@ IaCで次のリソースを作成します。
 - Scope: `openid linux-monitoring/status.read`
 - Redirect URL: GPT Editorが表示するcallback URLをCognito User Pool Clientのcallback URLへ登録する
 
-OpenAIは`https://chat.openai.com/aip/<GPT_ID>/oauth/callback`と`https://chatgpt.com/aip/<GPT_ID>/oauth/callback`の両方をcallback URLとして登録するよう案内しています。GPT IDは現在のGPT URLから確認します。Cognito User Pool ClientのsecretはGit・CloudFormation出力・会話へ保存せず、所有者が取得してGPT Editorだけへ設定します。
+OpenAIは`https://chat.openai.com/aip/<GPT_ID>/oauth/callback`と`https://chatgpt.com/aip/<GPT_ID>/oauth/callback`をcallback URLとして案内しています。ただし、実際に登録する値はGPT Editorが表示したURLを正とします。表示されるAction用のIDは、公開GPT URLのIDと異なることがあります。Cognito User Pool ClientのsecretはGit・CloudFormation出力・会話へ保存せず、所有者が取得してGPT Editorだけへ設定します。
 
 このPoCでは、Cognito Domainの候補として`linux-monitoring-gpt-804761969461`を使います。これはグローバルに一意である必要があるCognitoのprefix domainを、AWSアカウントIDで衝突しにくくするためです。アカウントIDは認証情報ではありません。
 
