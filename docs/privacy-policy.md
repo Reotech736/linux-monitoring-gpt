@@ -5,6 +5,7 @@ title: Linux Server Diagnostic GPT プライバシーポリシー
 # Linux Server Diagnostic GPT プライバシーポリシー
 
 施行日: 2026-07-13
+最終更新日: 2026-07-14
 
 ## 概要
 
@@ -23,7 +24,7 @@ Actionはシェルアクセスを提供せず、サーバ上でコマンドを�
 
 ## 利用目的と共有
 
-データは監視対象サーバの現在の状態を取得・説明する目的だけに使用します。サービスはChatGPTからActionを呼び出し、AWSのAPI Gateway、Lambda、Amazon Managed Service for Prometheus、Systems Manager Parameter Store、CloudWatch Logsを用いて認証と処理を行います。
+データは監視対象サーバの現在の状態を取得・説明する目的だけに使用します。サービスはChatGPTからActionを呼び出し、AWSのAPI Gateway、Amazon Cognito、Lambda、Amazon Managed Service for Prometheus、CloudWatch Logsを用いて認証と処理を行います。
 
 診断APIはCognito OAuthによる利用者ごとのアクセストークンで保護されています。OAuth Client SecretとアクセストークンはAPIレスポンス、ソースコード、アプリケーションログには含めません。
 

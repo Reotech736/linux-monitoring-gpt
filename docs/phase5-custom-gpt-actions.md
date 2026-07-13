@@ -25,13 +25,13 @@ OpenAI公式ガイドでは、ActionにOpenAPIスキーマを登録し、認証�
 
 ## リンク共有時のプライバシーポリシー
 
-GPTを「リンクを知っている人」に公開する前に、`docs/privacy-policy.md`の公開GitHub URLをGPT EditorのPrivacy policy URLへ設定します。
+GPTを「リンクを知っている人」に公開する前に、GitHub Pagesで公開したポリシーURLをGPT EditorのPrivacy policy URLへ設定します。
 
 ```text
-https://github.com/Reotech736/linux-monitoring-gpt/blob/main/docs/privacy-policy.md
+https://reotech736.com/linux-monitoring-gpt/privacy-policy.html
 ```
 
-このURLには、Actionが返すサーバメトリクス、AWSとChatGPTを介した処理、ログ・メトリクスの保持期間、問い合わせ先を記載します。GitHub Pagesも有効化済みですが、既存カスタムドメインの設定が404を返すため、現時点ではこのGitHub URLを正とします。共有範囲を広げる場合も、Cognitoで招待した利用者だけがActionを利用できます。
+このURLには、Actionが返すサーバメトリクス、AWSとChatGPTを介した処理、ログ・メトリクスの保持期間、問い合わせ先を記載します。GitHub Pagesはカスタムドメイン`reotech736.com`へリダイレクトされます。このポリシーURLはHTTP 200で表示できることを確認済みです。共有範囲を広げる場合も、Cognitoで招待した利用者だけがActionを利用できます。
 
 ## Actionテスト
 

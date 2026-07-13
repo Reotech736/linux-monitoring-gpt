@@ -10,6 +10,8 @@ Phase 6（共有GPT向けOAuth認可）まで完了しています。Node Export
 
 NucBoxG5上の通常PrometheusとGrafanaを使い、Grafanaだけを自宅LANとTailscaleへ公開しています。Prometheus・Node Exporter・Prometheus Agentは公開しません。AMPを固定PromQLで照会する読み取り専用APIは、Cognito OAuthのアクセストークンとホスト閲覧グループを検証してからJSONの診断結果を返します。このAPIをActionとして登録した[Linux Server Diagnostic GPT](https://chatgpt.com/g/g-6a53c4cf774481919948ee509a3e6cda-linux-server-diagnostic-gpt)から、`home-server`の現在の状態とCPU使用率を日本語で取得できることを確認しました。
 
+公開文書の入口は [GitHub Pages](https://reotech736.com/linux-monitoring-gpt/) です。Custom GPTのPrivacy policy URLには [プライバシーポリシー](https://reotech736.com/linux-monitoring-gpt/privacy-policy.html) を設定します。
+
 最初のマイルストーンは、自宅LinuxサーバのNode ExporterをPrometheus Agentが収集し、Amazon Managed Service for Prometheus（AMP）上で `up` メトリクスを確認することです。
 
 ## 初期構成方針
