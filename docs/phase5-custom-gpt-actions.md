@@ -17,12 +17,11 @@ Phase 4の読み取り専用診断APIをCustom GPT Actionとして登録し、�
 
 1. ChatGPTでGPTを作成または編集し、**Configure**を開きます。
 2. **Actions**でActionを追加し、`custom-gpt/openapi.yaml`の内容をインポートします。
-3. Authenticationで**API Key**を選び、認証ヘッダー名を`x-api-key`に設定します。
-4. Phase 4でパスワードマネージャへ保存した共有シークレットを入力します。値はGit、Instructions、スキーマ、会話へ貼り付けません。
-5. `custom-gpt/instructions.md`の内容をInstructions欄へ貼り付けます。
-6. GPTの共有範囲を設定します。リンク共有を使う場合は、下記のプライバシーポリシーを登録し、共有対象を信頼できる人に限定します。
+3. Authenticationで**OAuth**を選びます。Client ID、Client Secret、Authorization URL、Token URL、Scopeの設定は[Phase 6の手順](phase6-public-access-design.md)を参照します。Client SecretはGit、Instructions、スキーマ、会話へ貼り付けません。
+4. `custom-gpt/instructions.md`の内容をInstructions欄へ貼り付けます。
+5. GPTの共有範囲を設定します。リンク共有を使う場合は、下記のプライバシーポリシーを登録し、共有対象を信頼できる人に限定します。
 
-OpenAI公式ガイドでは、ActionにOpenAPIスキーマを登録し、認証方式を設定したうえで、Action名と入出力に対応したInstructionsを記述することを案内しています。
+OpenAI公式ガイドでは、ActionにOpenAPIスキーマを登録し、認証方式を設定したうえで、Action名と入出力に対応したInstructionsを記述することを案内しています。Phase 4で使った共通`x-api-key`認証は、Phase 6でCognito OAuthへ移行済みです。
 
 ## リンク共有時のプライバシーポリシー
 
@@ -44,7 +43,7 @@ Actions画面の`getHostStatus`にある**Test**を使い、次を確認しま�
 }
 ```
 
-成功時はHTTP 200と`reachable`、CPU、メモリ、ディスク、ロード、稼働日数、`alerts`が返ります。401の場合は`x-api-key`と共有シークレットを、502の場合はPhase 4のCloudWatch Logsを確認します。
+成功時はHTTP 200と`reachable`、CPU、メモリ、ディスク、ロード、稼働日数、`alerts`が返ります。401の場合はCognito OAuthのサインイン、Client ID、Client Secret、callback URLを、403の場合はCognitoグループを、502の場合はPhase 4のCloudWatch Logsを確認します。
 
 その後、GPTとの会話で少なくとも次を確認します。
 
@@ -64,6 +63,6 @@ Actions画面の`getHostStatus`にある**Test**を使い、次を確認しま�
 
 ## セキュリティと削除
 
-- API URLは公開到達可能ですが、`x-api-key`が一致しなければHTTP 401で拒否されます。
-- 共有シークレットはChatGPTのAction認証設定とSSM Parameter Storeだけで管理します。Git、ログ、会話、OpenAPIスキーマに保存しません。
-- Actionを不要にする場合は、先にGPTからActionと共有シークレットを削除し、その後Phase 4のCloudFormation stackとSSMパラメータを削除します。
+- API URLは公開到達可能ですが、Cognitoの有効なOAuthアクセストークンがなければHTTP 401で拒否されます。さらに`monitoring-viewer-home-server`グループに属さない利用者はHTTP 403で拒否されます。
+- OAuth Client SecretはChatGPTのAction認証設定だけで管理します。Git、ログ、会話、OpenAPIスキーマに保存しません。
+- Phase 4の共有シークレットとSSM Parameter Storeのパラメータは、OAuth移行のロールバック用に一時保持しています。OAuthの正常系・拒否系を確認後、別のCloudFormation更新で旧Authorizerとともに削除します。

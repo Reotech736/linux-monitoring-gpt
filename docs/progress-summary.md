@@ -24,6 +24,7 @@ Custom GPT
 | 3 | ローカルPrometheusとGrafana | 完了。GrafanaのみLAN/Tailscaleから利用可能 |
 | 4 | AMPを読む診断REST API | 完了。`GET /hosts/home-server/status`だけを公開し、`x-api-key`で保護 |
 | 5 | Custom GPT Action | 正常系を完了。`home-server`の対象確認とCPU状態の日本語回答を確認 |
+| 6 | 共有GPT向けOAuth認可 | Cognito、JWT Authorizer、ホスト閲覧グループをデプロイ済み。招待ユーザーとOAuthログインの検証は未完了 |
 
 ## 実環境の確認記録
 
@@ -33,6 +34,7 @@ Custom GPT
 - SAM/CloudFormation stack `linux-monitoring-gpt-diagnostic-api`は`UPDATE_COMPLETE`。
 - アカウント全体Budget `aws-account-monthly-cost`は月額US$20、`HEALTHY`。
 - Prometheus Agent、ローカルPrometheus、Grafanaの各コンテナは稼働中。
+- 診断API stackはCognito OAuthを有効化済み。未認証の`GET /hosts/home-server/status`がHTTP 401で拒否されることを確認。
 
 この記録は確認時点のスナップショットです。日常の状態確認はGrafana、Custom GPT、AWSコンソールまたはAWS CLIで行います。
 

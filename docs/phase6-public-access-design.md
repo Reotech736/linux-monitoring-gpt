@@ -64,6 +64,18 @@ OpenAIは`https://chat.openai.com/aip/<GPT_ID>/oauth/callback`と`https://chatgp
 
 このPoCでは、Cognito Domainの候補として`linux-monitoring-gpt-804761969461`を使います。これはグローバルに一意である必要があるCognitoのprefix domainを、AWSアカウントIDで衝突しにくくするためです。アカウントIDは認証情報ではありません。
 
+## デプロイ済みの確認
+
+`linux-monitoring-gpt-diagnostic-api` stackへCognito OAuth認可をデプロイ済みです。次を確認しました。
+
+- User Poolは管理者作成だけを許可し、自己登録は無効
+- `monitoring-viewer-home-server`グループが存在
+- OAuth ClientはAuthorization Code Grantだけを許可し、`openid`と`linux-monitoring/status.read`だけを要求
+- アクセストークンの有効期限は1時間
+- API GatewayにCognito JWT Authorizerが存在し、未認証のstatus API呼び出しはHTTP 401
+
+OAuth Client Secretは意図的にCloudFormation出力へ含めていません。Cognitoコンソールで対象App Clientを開き、Client Secretを表示・コピーしてChatGPT GPT Editorへ設定します。値をターミナル出力、Git、会話へ貼り付けません。
+
 ## 移行と削除
 
 1. 現行stackを更新してCognito、JWT Authorizer、グループ検証を追加する。
