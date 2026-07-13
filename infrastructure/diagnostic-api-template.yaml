@@ -186,6 +186,14 @@ Resources:
       ManagedLoginVersion: 2
       UserPoolId: !Ref CognitoUserPool
 
+  CognitoManagedLoginBranding:
+    Type: AWS::Cognito::ManagedLoginBranding
+    DependsOn: CognitoUserPoolDomain
+    Properties:
+      ClientId: !Ref CognitoUserPoolClient
+      UserPoolId: !Ref CognitoUserPool
+      UseCognitoProvidedValues: true
+
   HomeServerViewerGroup:
     Type: AWS::Cognito::UserPoolGroup
     Properties:

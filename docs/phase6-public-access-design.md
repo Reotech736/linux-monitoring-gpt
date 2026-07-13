@@ -45,6 +45,7 @@ IaCで次のリソースを作成します。
 - User Pool Client: Authorization Code Grant、OAuth callback URL、1時間のアクセストークンを設定
 - Resource Server / Scope: `linux-monitoring/status.read`
 - Group: `monitoring-viewer-home-server`
+- Managed Login Branding: CloudFormationで作成したApp ClientへCognito標準のログイン画面を割り当てる
 - HTTP API JWT Authorizer: Cognito issuer、User Pool Client ID、上記スコープを検証
 
 自己登録を有効にすると、アプリクライアントIDを知る人がアカウントを作成できるため、このPoCでは無効にします。[Cognitoの自己登録設定](https://docs.aws.amazon.com/cognito/latest/developerguide/user-pool-settings-admin-create-user-policy.html)
@@ -75,6 +76,8 @@ OpenAIは`https://chat.openai.com/aip/<GPT_ID>/oauth/callback`と`https://chatgp
 - API GatewayにCognito JWT Authorizerが存在し、未認証のstatus API呼び出しはHTTP 401
 
 OAuth Client Secretは意図的にCloudFormation出力へ含めていません。Cognitoコンソールで対象App Clientを開き、Client Secretを表示・コピーしてChatGPT GPT Editorへ設定します。値をターミナル出力、Git、会話へ貼り付けません。
+
+CloudFormationなどのAPIでApp Clientを作成する場合、managed loginのbrandingは自動作成されません。`AWS::Cognito::ManagedLoginBranding`でCognito標準デザインを明示的に割り当てます。これがないとサインイン時に「Login pages unavailable」と表示されます。
 
 ## 移行と削除
 
