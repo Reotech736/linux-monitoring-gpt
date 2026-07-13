@@ -8,7 +8,7 @@ AMPへ任意のPromQLを渡さず、固定クエリだけを使う読み取り�
 GET /hosts/home-server/status
 ```
 
-API Gateway HTTP APIは`x-api-key`を読むLambda Authorizerで保護します。これはAPI Gateway標準のAPIキー機能ではなく、SSM Parameter Storeの`SecureString`と定数時間比較する共有シークレット認証です。
+> 注記: このPhaseで導入した`x-api-key`を読むLambda Authorizerは、Phase 6でCognito OAuthへ移行後に撤去します。本書の共有シークレット設定は導入時の記録であり、新規環境の現行手順ではありません。
 
 ## レスポンス
 

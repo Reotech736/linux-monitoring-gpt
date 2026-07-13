@@ -13,9 +13,9 @@ Phaseごとの実装結果は[docs/progress-summary.md](docs/progress-summary.md
 ## 現在の対象と到達点
 
 - 監視対象は`home-server`だけです。
-- Phase 5の正常系まで完了しています。Custom GPTから、対象ホストの確認とCPUを含む現在の診断結果の取得を確認済みです。
+- Phase 6まで完了しています。招待済みユーザーがCognito OAuthで認証後、Custom GPTから対象ホストの確認とCPUを含む現在の診断結果を取得できることを確認済みです。
 - 警告、監視停止、メトリクス欠損時のGPT応答は、安全な再現方法を決めてから検証します。
-- 共有GPT向けの初期認可としてCognito OAuth、JWT Authorizer、`home-server`閲覧グループまでデプロイ済みです。招待ユーザーとOAuthログインの検証、複数ホスト・複数利用者のデータ分離はPhase 6の継続対象です。設計は[docs/phase6-public-access-design.md](docs/phase6-public-access-design.md)に記録しています。
+- 共有GPT向けの初期認可としてCognito OAuth、JWT Authorizer、`home-server`閲覧グループを運用します。複数ホスト・複数利用者のデータ分離は次段階の対象です。設計は[docs/phase6-public-access-design.md](docs/phase6-public-access-design.md)に記録しています。
 
 ## 現行構成
 
@@ -28,9 +28,9 @@ home-server
          └─ Grafana (自宅LAN・Tailscaleだけに公開)
 
 Custom GPT
-  └─ API Gateway HTTP API
-       └─ Lambda Authorizer (SSM SecureStringでx-api-keyを検証)
-            └─ Status Lambda (固定PromQLだけを実行) ──> AMP
+  └─ Cognito OAuth
+       └─ API Gateway HTTP API (JWT Authorizer)
+            └─ Status Lambda (閲覧グループと固定PromQLだけを確認・実行) ──> AMP
 ```
 
 ## 決定済みの設計方針
@@ -44,7 +44,7 @@ Custom GPT
 | IaC | AMPとIAMユーザーはCloudFormation、診断APIはAWS SAM / CloudFormation |
 | 人用AWS認証 | `Reotech736`プロファイルの一時認証 |
 | Agent用AWS認証 | 専用IAMユーザー`linux-monitoring-gpt-agent`。対象AMP workspaceへの`aps:RemoteWrite`だけを許可 |
-| 診断API | `GET /hosts/home-server/status`だけを公開し、`x-api-key`で認証する |
+| 診断API | `GET /hosts/home-server/status`だけを公開し、Cognito OAuthのスコープと閲覧グループで認可する |
 | GPT | [Linux Server Diagnostic GPT](https://chatgpt.com/g/g-6a53c4cf774481919948ee509a3e6cda-linux-server-diagnostic-gpt)をActionとして利用する |
 | アカウント全体のコスト通知 | `aws-account-monthly-cost`、月額US$20。特定プロジェクトだけでなくAWSアカウント全体が対象 |
 
@@ -54,9 +54,9 @@ Custom GPT
 - 自宅側からAWSへの通信は、Agentによる外向きHTTPSだけを使う。AWSから自宅サーバを直接scrapeしない。
 - IAMは最小権限とし、Agentの書き込み権限と診断APIの読み取り権限を分離する。
 - 診断APIは読み取り専用とする。任意のPromQL、シェルコマンド、任意のホスト名を外部入力として受け付けない。
-- API共有シークレット、AWSアクセスキー、`.env`の実値、Prometheus実データ、ログをGitへコミットしない。
+- OAuth Client Secret、AWSアクセスキー、`.env`の実値、Prometheus実データ、ログをGitへコミットしない。
 - AWSリソースを作成・変更・削除する前に、対象、料金要因、必要なIAM権限、削除方法を説明して確認を得る。
-- GPTをリンク共有する場合はプライバシーポリシーを設定し、Phase 6で利用者ごとの認可を実装するまで信頼できる人だけに限定する。
+- GPTをリンク共有する場合はプライバシーポリシーを設定し、Cognitoで招待した利用者だけに共有する。
 
 ## 次の拡張候補
 

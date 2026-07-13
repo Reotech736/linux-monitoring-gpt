@@ -16,10 +16,6 @@ Parameters:
   AmpWorkspaceId:
     Type: String
     Description: AMP workspace ID used to construct the Prometheus-compatible query endpoint.
-  ApiKeyParameterName:
-    Type: String
-    Description: Existing SSM SecureString parameter name containing the API shared secret.
-    AllowedPattern: '^/[a-zA-Z0-9_./-]+$'
   AllowedHostId:
     Type: String
     Default: home-server
@@ -68,21 +64,6 @@ Resources:
         - Key: Component
           Value: diagnostic-api
 
-  AuthorizerFunctionLogGroup:
-    Type: AWS::Logs::LogGroup
-    Properties:
-      LogGroupName: !Sub '/aws/lambda/${AWS::StackName}-authorizer'
-      RetentionInDays: 14
-      Tags:
-        - Key: Project
-          Value: linux-monitoring-gpt
-        - Key: Environment
-          Value: poc
-        - Key: ManagedBy
-          Value: cloudformation
-        - Key: Component
-          Value: diagnostic-api
-
   DiagnosticHttpApi:
     Type: AWS::Serverless::HttpApi
     Properties:
@@ -101,14 +82,6 @@ Resources:
       Auth:
         DefaultAuthorizer: CognitoJwtAuthorizer
         Authorizers:
-          SharedSecretAuthorizer:
-            AuthorizerPayloadFormatVersion: '2.0'
-            EnableSimpleResponses: true
-            EnableFunctionDefaultPermissions: true
-            FunctionArn: !GetAtt AuthorizerFunction.Arn
-            Identity:
-              Headers:
-                - x-api-key
           CognitoJwtAuthorizer:
             AuthorizationScopes:
               - linux-monitoring/status.read
@@ -234,39 +207,6 @@ Resources:
                   - logs:PutLogEvents
                 Resource: !Sub '${StatusFunctionLogGroup.Arn}:*'
 
-  AuthorizerFunctionRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: lambda.amazonaws.com
-            Action: sts:AssumeRole
-      Tags:
-        - Key: Project
-          Value: linux-monitoring-gpt
-        - Key: Environment
-          Value: poc
-        - Key: ManagedBy
-          Value: cloudformation
-        - Key: Component
-          Value: diagnostic-api
-      Policies:
-        - PolicyName: read-api-shared-secret
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action: ssm:GetParameter
-                Resource: !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${ApiKeyParameterName}'
-              - Effect: Allow
-                Action:
-                  - logs:CreateLogStream
-                  - logs:PutLogEvents
-                Resource: !Sub '${AuthorizerFunctionLogGroup.Arn}:*'
-
   StatusFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -297,27 +237,6 @@ Resources:
             Path: /hosts/{host_id}/status
             Method: GET
 
-  AuthorizerFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      FunctionName: !Sub '${AWS::StackName}-authorizer'
-      CodeUri: ../lambda/authorizer/
-      Handler: app.lambda_handler
-      Runtime: python3.12
-      Architectures:
-        - x86_64
-      Role: !GetAtt AuthorizerFunctionRole.Arn
-      Timeout: 15
-      MemorySize: 128
-      Tags:
-        Project: linux-monitoring-gpt
-        Environment: poc
-        ManagedBy: cloudformation
-        Component: diagnostic-api
-      Environment:
-        Variables:
-          API_KEY_PARAMETER_NAME: !Ref ApiKeyParameterName
-
 Outputs:
   ApiUrl:
     Description: Authenticated status API base URL.
@@ -325,9 +244,6 @@ Outputs:
   StatusEndpoint:
     Description: Status API URL for the configured host.
     Value: !Sub 'https://${DiagnosticHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/hosts/${AllowedHostId}/status'
-  ApiKeyParameterName:
-    Description: SSM SecureString parameter name supplied at deployment.
-    Value: !Ref ApiKeyParameterName
   CognitoUserPoolId:
     Description: Cognito User Pool for invited Custom GPT users.
     Value: !Ref CognitoUserPool

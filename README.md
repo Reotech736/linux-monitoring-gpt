@@ -6,9 +6,9 @@
 
 ## 現在のステータス
 
-Phase 5（Custom GPT連携）の正常系まで完了しています。Node Exporterを`127.0.0.1:9100`でsystemdサービスとして実行し、Docker Compose上のPrometheus Agentが収集したメトリクスを、東京リージョンのAmazon Managed Service for Prometheus（AMP）へ転送しています。AMPのQuery APIで`up{host_id="home-server"}`が`1`になることを確認済みです。
+Phase 6（共有GPT向けOAuth認可）まで完了しています。Node Exporterを`127.0.0.1:9100`でsystemdサービスとして実行し、Docker Compose上のPrometheus Agentが収集したメトリクスを、東京リージョンのAmazon Managed Service for Prometheus（AMP）へ転送しています。AMPのQuery APIで`up{host_id="home-server"}`が`1`になることを確認済みです。
 
-NucBoxG5上の通常PrometheusとGrafanaを使い、Grafanaだけを自宅LANとTailscaleへ公開しています。Prometheus・Node Exporter・Prometheus Agentは公開しません。AMPを固定PromQLで照会する読み取り専用APIは、`x-api-key`を検証してからJSONの診断結果を返します。このAPIをActionとして登録した[Linux Server Diagnostic GPT](https://chatgpt.com/g/g-6a53c4cf774481919948ee509a3e6cda-linux-server-diagnostic-gpt)から、`home-server`の現在の状態とCPU使用率を日本語で取得できることを確認しました。
+NucBoxG5上の通常PrometheusとGrafanaを使い、Grafanaだけを自宅LANとTailscaleへ公開しています。Prometheus・Node Exporter・Prometheus Agentは公開しません。AMPを固定PromQLで照会する読み取り専用APIは、Cognito OAuthのアクセストークンとホスト閲覧グループを検証してからJSONの診断結果を返します。このAPIをActionとして登録した[Linux Server Diagnostic GPT](https://chatgpt.com/g/g-6a53c4cf774481919948ee509a3e6cda-linux-server-diagnostic-gpt)から、`home-server`の現在の状態とCPU使用率を日本語で取得できることを確認しました。
 
 最初のマイルストーンは、自宅LinuxサーバのNode ExporterをPrometheus Agentが収集し、Amazon Managed Service for Prometheus（AMP）上で `up` メトリクスを確認することです。
 
@@ -58,7 +58,7 @@ Phase 2の具体的な認証、CloudFormation、Agent接続、削除手順は [d
 
 ## Phase 4の診断API
 
-AMPを固定PromQLで読み取り、診断用JSONへ整形するAPIの設計・検証・デプロイ手順は [docs/phase4-diagnostic-api.md](docs/phase4-diagnostic-api.md) を参照してください。AWSリソースを作成する前に、SSMの共有シークレット、変更セット、料金要因、IAM権限、削除方法を確認します。
+AMPを固定PromQLで読み取り、診断用JSONへ整形するAPIの設計・検証・デプロイ手順は [docs/phase4-diagnostic-api.md](docs/phase4-diagnostic-api.md) を参照してください。認証はPhase 6でCognito OAuthへ移行済みです。
 
 ## Phase 5のCustom GPT連携
 
