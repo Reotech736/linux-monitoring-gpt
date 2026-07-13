@@ -25,6 +25,17 @@ Custom GPT
 | 4 | AMPを読む診断REST API | 完了。`GET /hosts/home-server/status`だけを公開し、`x-api-key`で保護 |
 | 5 | Custom GPT Action | 正常系を完了。`home-server`の対象確認とCPU状態の日本語回答を確認 |
 
+## 実環境の確認記録
+
+2026-07-14に、次の状態を確認しました。
+
+- CloudFormation stack `linux-monitoring-gpt-amp`は`CREATE_COMPLETE`。
+- SAM/CloudFormation stack `linux-monitoring-gpt-diagnostic-api`は`UPDATE_COMPLETE`。
+- アカウント全体Budget `aws-account-monthly-cost`は月額US$20、`HEALTHY`。
+- Prometheus Agent、ローカルPrometheus、Grafanaの各コンテナは稼働中。
+
+この記録は確認時点のスナップショットです。日常の状態確認はGrafana、Custom GPT、AWSコンソールまたはAWS CLIで行います。
+
 ## セキュリティ上の整理
 
 - Node Exporter、Prometheus、Prometheus Agentはインターネットへ公開しない。

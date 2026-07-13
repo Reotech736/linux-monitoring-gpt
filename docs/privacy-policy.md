@@ -1,44 +1,44 @@
 ---
-title: Linux Server Diagnostic GPT Privacy Policy
+title: Linux Server Diagnostic GPT プライバシーポリシー
 ---
 
-# Linux Server Diagnostic GPT Privacy Policy
+# Linux Server Diagnostic GPT プライバシーポリシー
 
-Effective date: 2026-07-13
+施行日: 2026-07-13
 
-## Overview
+## 概要
 
-Linux Server Diagnostic GPT is a personal monitoring assistant. It retrieves the current operational status of one self-managed Linux server through a read-only diagnostic API and explains that status in Japanese.
+Linux Server Diagnostic GPTは、個人運用の監視アシスタントです。読み取り専用の診断APIを通じて、自己管理するLinuxサーバ1台の現在の稼働状況を取得し、日本語で説明します。
 
-## Data processed
+## 処理するデータ
 
-When the Action is used, the service processes the following server-monitoring data:
+Actionを利用するとき、サービスは次のサーバ監視データを処理します。
 
-- server reachability
-- CPU, memory, and disk usage percentages
-- load average, uptime, and metric observation time
-- API request metadata required to operate and secure the service
+- サーバ到達可否
+- CPU、メモリ、ディスクの使用率
+- ロードアベレージ、稼働時間、メトリクスの観測時刻
+- サービスの運用と保護に必要なAPIリクエストのメタデータ
 
-The Action does not provide shell access, execute commands on the server, change server settings, or accept arbitrary PromQL queries.
+Actionはシェルアクセスを提供せず、サーバ上でコマンドを実行せず、サーバ設定を変更せず、任意のPromQLクエリも受け付けません。
 
-## Purpose and sharing
+## 利用目的と共有
 
-The data is used only to retrieve and explain the monitored server's current status. The service uses ChatGPT to invoke the Action and AWS services, including API Gateway, Lambda, Amazon Managed Service for Prometheus, Systems Manager Parameter Store, and CloudWatch Logs, to authenticate and process the request.
+データは監視対象サーバの現在の状態を取得・説明する目的だけに使用します。サービスはChatGPTからActionを呼び出し、AWSのAPI Gateway、Lambda、Amazon Managed Service for Prometheus、Systems Manager Parameter Store、CloudWatch Logsを用いて認証と処理を行います。
 
-The diagnostic API is protected by a shared secret. The secret is not included in API responses, source code, or application logs.
+診断APIは共有シークレットで保護されています。シークレットはAPIレスポンス、ソースコード、アプリケーションログには含めません。
 
-## Retention
+## 保持期間
 
-- AMP monitoring metrics are retained for 180 days.
-- CloudWatch Logs created for the diagnostic API are retained for 14 days.
-- The operator does not intentionally collect a user profile, account identifier, or user-provided free-text input through the diagnostic API.
+- AMPの監視メトリクスは180日間保持します。
+- 診断API用に作成するCloudWatch Logsは14日間保持します。
+- 診断APIは、利用者プロフィール、アカウント識別子、利用者が入力した自由文を意図して収集しません。
 
-## Security and access
+## セキュリティとアクセス
 
-The API is read-only and accepts only the fixed `home-server` monitoring target. Access requires a valid API shared secret. No security measure can guarantee absolute protection; do not share the GPT or its access credentials with people who should not be able to view the monitored server's status.
+APIは読み取り専用であり、固定された監視対象`home-server`だけを受け付けます。アクセスには有効なAPI共有シークレットが必要です。完全な安全を保証する手段はないため、監視対象サーバの状態を見せるべきでない人へGPTまたはそのアクセス資格情報を共有しないでください。
 
-## Changes and contact
+## 改定と問い合わせ先
 
-This policy may be updated when the service changes. The latest version is published at this URL.
+このポリシーはサービス変更時に改定することがあります。最新版はこのURLで公開します。
 
-For questions or requests about this policy, open an issue in the [linux-monitoring-gpt repository](https://github.com/Reotech736/linux-monitoring-gpt/issues).
+このポリシーに関する質問や要望は、[linux-monitoring-gptリポジトリ](https://github.com/Reotech736/linux-monitoring-gpt/issues)のIssueで受け付けます。

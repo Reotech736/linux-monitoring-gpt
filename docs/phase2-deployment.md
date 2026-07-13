@@ -4,7 +4,7 @@
 
 - AWSリージョン: `ap-northeast-1`（東京）
 - AMP保持期間: 180日
-- AWS Budgets: `aws-account-foundation`で管理するアカウント全体US$20 Budgetを利用
+- AWS Budgets: `aws-account-foundation`で作成した、アカウント全体を対象とする`aws-account-monthly-cost`（月額US$20）を利用
 - 人用認証: `Reotech736`プロファイルの`aws login --remote`
 - Agent認証: `linux-monitoring-gpt-agent` IAMユーザーのアクセスキー
 - Agent権限: 作成したAMP workspaceへの`aps:RemoteWrite`だけ
@@ -15,7 +15,7 @@
 
 現在のNode Exporterでは全メトリクスを送ると約2.06億サンプル/月になります。`prometheus.amp.yml.example`の許可リストは約49時系列に絞り、30秒間隔で約423万サンプル/月を見込みます。
 
-AMPの無料枠には40Mサンプル、10GB保存、200B Query Samples Processedが含まれます。適用条件やアカウントのクレジット適用状況は請求画面で確認してください。アカウント全体Budgetは実費50%・80%・100%および予測100%でメール通知します。AWS Budgetsは通知のみであり、利用を自動停止しません。
+AWSの現行料金ページでは、AMPのFree Tierとして40Mサンプル、10GB保存、200B Query Samples Processedが案内されています。ただし、Free Tierやクレジットの適用可否はアカウント条件に依存するため、請求画面と[AMP料金ページ](https://aws.amazon.com/prometheus/pricing/)で確認してください。`aws-account-monthly-cost`は、実費50%・80%・100%および予測100%でメール通知します。このBudgetは特定プロジェクトだけでなくAWSアカウント全体を対象とし、通知のみで利用を自動停止しません。
 
 ## 1. 人用AWSプロファイルを作成する
 
@@ -83,7 +83,7 @@ aws cloudformation wait stack-create-complete \
 
 ## 3. Agent用アクセスキーを保存する
 
-CloudFormation出力の`AgentUserName`を確認し、AWSコンソールのIAM画面でそのユーザーのアクセスキーを1つだけ作成します。シークレットアクセスキーは表示された時点で、次の専用ファイルへ保存します。キーをターミナル、ログ、Git、`.env`に貼り付けません。
+CloudFormation出力の`AgentUserName`を確認し、AWSコンソールのIAM画面でそのユーザーのアクセスキーを1つだけ作成します。シークレットアクセスキーは表示された時点で、次の専用ファイルへ保存します。キーをターミナル、ログ、Git、`.env`に貼り付けません。人用プロファイルとAgent用プロファイルを分離するため、Agentのファイルだけを`~/.config/linux-monitoring-gpt/aws/`へ置きます。
 
 ```bash
 install -d -m 700 "$HOME/.config/linux-monitoring-gpt/aws"
@@ -164,7 +164,7 @@ uvx --from awscurl awscurl \
   "https://aps-workspaces.ap-northeast-1.amazonaws.com/workspaces/${workspace_id}/api/v1/query"
 ```
 
-レスポンス内の`"value":[...,"1"]`なら、最初のマイルストーンは達成です。今回のPoCでは`home-server`の`up=1`を確認済みです。Cost Explorerではサービスを`Amazon Managed Service for Prometheus`、Usage Typeを`MetricSampleCount`で絞り、日次の利用量を確認します。
+レスポンス内の`"value":[...,"1"]`なら、最初のマイルストーンは達成です。今回のPoCでは`home-server`の`up=1`を確認済みです。コストの正確な請求額はCost Explorerを正とし、サービスを`Amazon Managed Service for Prometheus`で絞って確認します。取り込み量の傾向はAMPの`IngestionRate`も併せて確認します。
 
 ## 停止と削除
 

@@ -31,7 +31,7 @@ API Gateway HTTP APIは`x-api-key`を読むLambda Authorizerで保護します�
 - CPUまたはメモリが90%以上なら`cpu_usage_high`または`memory_usage_high`を追加します。
 - ディスク使用率が85%以上なら`disk_usage_high`を追加します。
 - `up`が0または欠損なら`reachable`は`false`となり、`host_unreachable`を追加します。
-- いずれかの必須メトリクスが欠損してもHTTP 200を返し、値を`null`、`alerts`に`metrics_unavailable`を含めます。
+- `up`以外の診断用メトリクスが欠損してもHTTP 200を返し、該当値を`null`、`alerts`に`metrics_unavailable`を含めます。
 - 未許可ホストはHTTP 404と`{"code":"host_not_found"}`、AMP照会失敗はHTTP 502と`{"code":"amp_query_failed"}`を返します。
 
 ## デプロイ前の準備
@@ -45,6 +45,11 @@ aws ssm put-parameter \
   --name /linux-monitoring-gpt/poc/api-key \
   --type SecureString \
   --value "$api_key" \
+  --tags \
+    Key=Project,Value=linux-monitoring-gpt \
+    Key=Environment,Value=poc \
+    Key=ManagedBy,Value=manual \
+    Key=Component,Value=diagnostic-api \
   --region ap-northeast-1 \
   --profile Reotech736
 unset api_key
@@ -60,6 +65,8 @@ unset api_key
 - 診断Lambdaと、AMP workspaceの`aps:QueryMetrics`だけを許可する実行ロール
 - Authorizer Lambdaと、指定SSMパラメータへの`ssm:GetParameter`だけを許可する実行ロール
 - API・Lambda用の14日保持CloudWatch Logs
+
+SSMパラメータはスタック外で手動作成するため、上記コマンドで`Project`、`Environment`、`ManagedBy`、`Component`タグを付けます。スタック名は`linux-monitoring-gpt-diagnostic-api`です。
 
 既存のAMP stack、Prometheus Agent、ローカルPrometheus、Grafanaは変更しません。料金要因はHTTP APIリクエスト、Lambda実行、CloudWatch Logs、SSM Parameter Storeです。
 
@@ -86,7 +93,7 @@ amp_workspace_id="$(aws cloudformation describe-stacks \
   --output text --region ap-northeast-1 --profile Reotech736)"
 
 sam deploy \
-  --template-file infrastructure/diagnostic-api-template.yaml \
+  --template-file .aws-sam/diagnostic-api/template.yaml \
   --stack-name linux-monitoring-gpt-diagnostic-api \
   --resolve-s3 \
   --capabilities CAPABILITY_IAM \
@@ -109,7 +116,7 @@ aws cloudformation describe-change-set \
   --profile Reotech736
 ```
 
-HTTP API、Lambda 2個、IAMロール2個、CloudWatch Logs 3個だけが含まれることを確認してから実行します。
+HTTP API、Lambda 2個、IAMロール2個、CloudWatch Logs 3個、およびHTTP APIからLambdaを呼ぶためにSAMが生成するLambda権限だけが含まれることを確認してから実行します。
 
 ```bash
 aws cloudformation execute-change-set \
@@ -122,6 +129,8 @@ aws cloudformation wait stack-create-complete \
   --region ap-northeast-1 \
   --profile Reotech736
 ```
+
+既存stackを更新した場合は、最後の待機コマンドを`stack-update-complete`へ読み替えます。
 
 実行後は、stack出力の`StatusEndpoint`へ正しい`x-api-key`を指定して確認します。
 

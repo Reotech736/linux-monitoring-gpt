@@ -2,7 +2,7 @@
 
 自宅Linuxサーバの状態をPrometheus形式で収集し、AWSへ安全に転送・保存するPoCです。最終的には、診断用REST APIを経由してカスタムGPTがサーバ状態を日本語で説明できるようにします。
 
-詳細な背景、設計方針、段階的な計画は [PROJECT_BRIEF.md](PROJECT_BRIEF.md) を参照してください。
+目的、現行設計、運用上の制約は [PROJECT_BRIEF.md](PROJECT_BRIEF.md) を参照してください。Phaseごとの実装結果と未検証項目は [docs/progress-summary.md](docs/progress-summary.md) にまとめています。
 
 ## 現在のステータス
 
@@ -63,8 +63,6 @@ AMPを固定PromQLで読み取り、診断用JSONへ整形するAPIの設計・�
 ## Phase 5のCustom GPT連携
 
 Custom GPT Actions用のOpenAPIスキーマ、Instructions、ChatGPT画面での安全な設定・テスト手順は [docs/phase5-custom-gpt-actions.md](docs/phase5-custom-gpt-actions.md) を参照してください。
-
-各Phaseの実装内容、確認結果、未検証項目をまとめた [docs/progress-summary.md](docs/progress-summary.md) も参照してください。
 
 ## 進め方
 
