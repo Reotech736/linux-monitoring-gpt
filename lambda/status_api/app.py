@@ -126,7 +126,13 @@ def _claim_groups(event: dict[str, Any]) -> set[str]:
             try:
                 parsed_groups = json.loads(groups)
             except json.JSONDecodeError:
-                parsed_groups = None
+                # HTTP API may serialize an array without quoting each string
+                # value (for example, [monitoring-viewer-home-server]).
+                parsed_groups = [
+                    group.strip().strip('"\'')
+                    for group in groups.removeprefix("[").removesuffix("]").split(",")
+                    if group.strip().strip('"\'')
+                ]
             if isinstance(parsed_groups, list):
                 return {group for group in parsed_groups if isinstance(group, str)}
         return {group.strip() for group in groups.split(",") if group.strip()}
@@ -137,7 +143,11 @@ def _claim_groups(event: dict[str, Any]) -> set[str]:
 
 def _is_allowed_viewer(event: dict[str, Any]) -> bool:
     required_group = os.environ.get("ALLOWED_COGNITO_GROUP", "monitoring-viewer-home-server")
-    return required_group in _claim_groups(event)
+    groups = _claim_groups(event)
+    allowed = required_group in groups
+    if not allowed:
+        LOGGER.warning("Cognito viewer group was not present in the JWT claims: %s", sorted(groups))
+    return allowed
 
 
 def build_status(host_id: str, client: QueryClient) -> dict[str, Any]:

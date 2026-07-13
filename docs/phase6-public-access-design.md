@@ -52,6 +52,8 @@ IaCで次のリソースを作成します。
 
 `StatusFunction`はAPI Gatewayが渡すJWT claimsの`cognito:groups`を確認し、`monitoring-viewer-home-server`に属するユーザーだけへ`home-server`を返します。グループ不一致はHTTP 403にします。JWT Authorizerだけではグループ単位のホスト対応表を表現しにくいため、ホスト認可はLambdaで明示的に確認します。
 
+HTTP APIがJWTのグループ配列を文字列化する形式には差異があり得るため、`StatusFunction`はJSON配列と角括弧付きの配列形式の両方を解釈します。拒否時は確認に必要なグループ名だけをCloudWatch Logsへ記録し、トークンやパスワードは記録しません。
+
 ## Custom GPT側の設定
 
 デプロイ後、GPT EditorのAuthenticationを**OAuth**へ切り替えます。設定値はCognito User Pool DomainとUser Pool Clientから取得します。

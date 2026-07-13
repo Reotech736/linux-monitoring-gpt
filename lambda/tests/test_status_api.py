@@ -97,3 +97,17 @@ class StatusApiTests(unittest.TestCase):
         response = app.lambda_handler(event, None, FakeAmpClient(self.values))
 
         self.assertEqual(response["statusCode"], 200)
+
+    def test_accepts_group_claim_encoded_as_an_unquoted_array(self):
+        event = {
+            "pathParameters": {"host_id": "home-server"},
+            "requestContext": {
+                "authorizer": {
+                    "jwt": {"claims": {"cognito:groups": "[monitoring-viewer-home-server]"}}
+                }
+            },
+        }
+
+        response = app.lambda_handler(event, None, FakeAmpClient(self.values))
+
+        self.assertEqual(response["statusCode"], 200)
