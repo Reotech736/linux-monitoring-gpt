@@ -15,7 +15,7 @@ Phaseごとの実装結果は[docs/progress-summary.md](docs/progress-summary.md
 - 監視対象は`home-server`だけです。
 - Phase 5の正常系まで完了しています。Custom GPTから、対象ホストの確認とCPUを含む現在の診断結果の取得を確認済みです。
 - 警告、監視停止、メトリクス欠損時のGPT応答は、安全な再現方法を決めてから検証します。
-- 複数ホスト・複数利用者への公開はPhase 6以降の対象です。
+- 複数ホスト・複数利用者への公開はPhase 6以降の対象です。共有GPT向けの初期認可設計は[docs/phase6-public-access-design.md](docs/phase6-public-access-design.md)に記録しています。
 
 ## 現行構成
 

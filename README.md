@@ -64,6 +64,10 @@ AMPを固定PromQLで読み取り、診断用JSONへ整形するAPIの設計・�
 
 Custom GPT Actions用のOpenAPIスキーマ、Instructions、ChatGPT画面での安全な設定・テスト手順は [docs/phase5-custom-gpt-actions.md](docs/phase5-custom-gpt-actions.md) を参照してください。
 
+## Phase 6の共有GPT向け認可
+
+リンク共有時に利用者ごとの認可へ移行する設計と、AWSリソースを作成する前に確認する内容は [docs/phase6-public-access-design.md](docs/phase6-public-access-design.md) を参照してください。
+
 ## 進め方
 
 各段階で、概念の説明、設定変更、検証方法、費用・セキュリティ上の注意点をセットで確認します。AWSリソースの作成や削除、外部サービスの変更は、事前に内容を説明して確認を得てから行います。
