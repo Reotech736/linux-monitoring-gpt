@@ -76,6 +76,7 @@ OpenAIは`https://chat.openai.com/aip/<GPT_ID>/oauth/callback`と`https://chatgp
 - OAuth ClientはAuthorization Code Grantだけを許可し、`openid`と`linux-monitoring/status.read`だけを要求
 - アクセストークンの有効期限は1時間
 - API GatewayにCognito JWT Authorizerが存在し、未認証のstatus API呼び出しはHTTP 401
+- 招待済みかつ`monitoring-viewer-home-server`所属のユーザーが、Cognito managed loginで初回パスワードを設定後、Custom GPTから監視値を取得
 
 OAuth Client Secretは意図的にCloudFormation出力へ含めていません。Cognitoコンソールで対象App Clientを開き、Client Secretを表示・コピーしてChatGPT GPT Editorへ設定します。値をターミナル出力、Git、会話へ貼り付けません。
 
@@ -85,9 +86,9 @@ CloudFormationなどのAPIでApp Clientを作成する場合、managed loginのb
 
 1. 現行stackを更新してCognito、JWT Authorizer、グループ検証を追加する。
 2. 招待ユーザーを作成し、グループへ追加する。
-3. OAuthトークンで`GET /hosts/home-server/status`が成功することを確認する。
-4. GPT EditorをOAuth設定へ切り替え、招待ユーザーで正常系を確認する。
-5. 旧Lambda Authorizer、旧共有シークレット、SSMパラメータを削除する。
+3. OAuthトークンで`GET /hosts/home-server/status`が成功することを確認する。完了。
+4. GPT EditorをOAuth設定へ切り替え、招待ユーザーで正常系を確認する。完了。
+5. 旧Lambda Authorizer、旧共有シークレット、SSMパラメータを削除する。将来の削除作業。
 
 削除前にOAuth経由の正常系と拒否系を確認します。旧共有シークレットを先に削除すると、ロールバック時の復旧手段が失われます。
 
