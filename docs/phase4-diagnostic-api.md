@@ -8,7 +8,7 @@ AMPへ任意のPromQLを渡さず、固定クエリだけを使う読み取り�
 GET /hosts/home-server/status
 ```
 
-> 注記: このPhaseで導入した`x-api-key`を読むLambda Authorizerは、Phase 6でCognito OAuthへ移行後に撤去します。本書の共有シークレット設定は導入時の記録であり、新規環境の現行手順ではありません。
+> 注記: このPhaseで導入した`x-api-key`を読むLambda AuthorizerとSSM共有シークレットは、2026-07-14にPhase 6のCognito OAuth移行完了後に撤去しました。本書の共有シークレット設定は導入時の記録であり、新規環境の現行手順ではありません。
 
 ## レスポンス
 

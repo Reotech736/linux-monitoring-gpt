@@ -22,7 +22,7 @@ Custom GPT
 | 1 | Node Exporterをsystemdで、Prometheus AgentをDocker Composeで稼働 | 完了。Exporterは`127.0.0.1:9100`だけで待受 |
 | 2 | AMP workspace、最小権限の書き込みIAM、remote write | 完了。`up{host_id="home-server"}`が`1`を確認 |
 | 3 | ローカルPrometheusとGrafana | 完了。GrafanaのみLAN/Tailscaleから利用可能 |
-| 4 | AMPを読む診断REST API | 完了。`GET /hosts/home-server/status`だけを公開し、共有シークレットで保護 |
+| 4 | AMPを読む診断REST API | 完了。`GET /hosts/home-server/status`だけを公開する読み取り専用APIを実装。認証はPhase 6でOAuthへ移行済み |
 | 5 | Custom GPT Action | 正常系を完了。`home-server`の対象確認とCPU状態の日本語回答を確認 |
 | 6 | 共有GPT向けOAuth認可 | 完了。招待ユーザーのOAuthログイン後、Custom GPTから`home-server`の監視値を取得 |
 
@@ -45,7 +45,7 @@ Custom GPT
 - Grafanaは自宅LANとTailscaleだけで利用する。
 - 診断APIはインターネットから到達可能だが、Cognito JWT Authorizerがアクセストークンと`linux-monitoring/status.read`スコープを検証する。Lambdaはさらに`monitoring-viewer-home-server`グループを確認する。
 - APIは固定された`home-server`の固定PromQLだけを扱い、任意のホスト名、PromQL、シェルコマンドは受け付けない。
-- OAuth Client SecretはChatGPTのAction認証設定だけで管理し、Gitには保存しない。旧共有シークレットはロールバック用として一時的にSSM Parameter Storeへ残している。
+- OAuth Client SecretはChatGPTのAction認証設定だけで管理し、Gitには保存しない。
 
 ## 現在の利用方法
 
@@ -56,5 +56,4 @@ Custom GPT
 ## 次に残る確認・拡張
 
 - 警告、監視停止、メトリクス欠損時にGPTが推測せず適切に説明することを安全な再現方法で確認する。
-- 旧Lambda AuthorizerとSSM共有シークレットを削除する前に、OAuth経由の正常系・拒否系を追加検証する。
 - 複数利用者・複数ホストを扱う場合の認可、データ分離、料金上限、Abuse対策を設計する。

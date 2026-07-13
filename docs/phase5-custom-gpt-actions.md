@@ -31,7 +31,7 @@ GPTを「リンクを知っている人」に公開する前に、`docs/privacy-
 https://github.com/Reotech736/linux-monitoring-gpt/blob/main/docs/privacy-policy.md
 ```
 
-このURLには、Actionが返すサーバメトリクス、AWSとChatGPTを介した処理、ログ・メトリクスの保持期間、問い合わせ先を記載します。GitHub Pagesも有効化済みですが、既存カスタムドメインの設定が404を返すため、現時点ではこのGitHub URLを正とします。共有範囲を広げると、共有シークレットを設定したAction経由でサーバ状態を確認できる利用者が増えます。利用者ごとの認可を実装するPhase 6までは、共有対象を信頼できる人だけに限定します。
+このURLには、Actionが返すサーバメトリクス、AWSとChatGPTを介した処理、ログ・メトリクスの保持期間、問い合わせ先を記載します。GitHub Pagesも有効化済みですが、既存カスタムドメインの設定が404を返すため、現時点ではこのGitHub URLを正とします。共有範囲を広げる場合も、Cognitoで招待した利用者だけがActionを利用できます。
 
 ## Actionテスト
 
@@ -65,4 +65,4 @@ Actions画面の`getHostStatus`にある**Test**を使い、次を確認しま�
 
 - API URLは公開到達可能ですが、Cognitoの有効なOAuthアクセストークンがなければHTTP 401で拒否されます。さらに`monitoring-viewer-home-server`グループに属さない利用者はHTTP 403で拒否されます。
 - OAuth Client SecretはChatGPTのAction認証設定だけで管理します。Git、ログ、会話、OpenAPIスキーマに保存しません。
-- Phase 4の共有シークレットとSSM Parameter Storeのパラメータは、OAuth移行のロールバック用に一時保持しています。OAuthの正常系・拒否系を確認後、別のCloudFormation更新で旧Authorizerとともに削除します。
+- Phase 4の共有シークレット、SSM Parameter Storeのパラメータ、旧AuthorizerはOAuthの正常系確認後に削除済みです。

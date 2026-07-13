@@ -88,9 +88,9 @@ CloudFormationなどのAPIでApp Clientを作成する場合、managed loginのb
 2. 招待ユーザーを作成し、グループへ追加する。
 3. OAuthトークンで`GET /hosts/home-server/status`が成功することを確認する。完了。
 4. GPT EditorをOAuth設定へ切り替え、招待ユーザーで正常系を確認する。完了。
-5. 旧Lambda Authorizer、旧共有シークレット、SSMパラメータを削除する。将来の削除作業。
+5. 旧Lambda Authorizer、旧共有シークレット、SSMパラメータを削除する。完了。
 
-削除前にOAuth経由の正常系と拒否系を確認します。旧共有シークレットを先に削除すると、ロールバック時の復旧手段が失われます。
+OAuth経由の正常系・拒否系を確認後、旧Lambda Authorizer、関連IAMロール・ログ、SSM共有シークレットを削除しました。旧方式へのロールバック経路はありません。
 
 ## 料金・運用への影響
 
