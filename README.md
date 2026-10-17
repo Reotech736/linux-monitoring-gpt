@@ -6,6 +6,14 @@
 
 ## 現在のステータス
 
+2026-10-17追記：移行済みプラグインにはCustom GPT Actionsが引き継がれておらず、監視値を取得できません。
+AMPでの`up=1`は再確認済みです。復旧用の認証付きMCP実装とAWSテンプレートを準備し、
+15件のテストとSAMビルドを通過し、MCP基盤をAWSへデプロイしました。
+認証メタデータのHTTP 200と未認証アクセスのHTTP 401を確認済みです。
+専用Cognito clientとcallback URL登録まで完了し、ChatGPT側の資格情報設定・OAuth接続・実データ取得を確認中です。
+設計・認証・公開手順は[プラグイン移行](docs/plugin-mcp-migration.md)を参照してください。
+以下のPhase 6完了は従来のCustom GPTについての確認記録です。
+
 Phase 6（共有GPT向けOAuth認可）まで完了しています。Node Exporterを`127.0.0.1:9100`でsystemdサービスとして実行し、Docker Compose上のPrometheus Agentが収集したメトリクスを、東京リージョンのAmazon Managed Service for Prometheus（AMP）へ転送しています。AMPのQuery APIで`up{host_id="home-server"}`が`1`になることを確認済みです。
 
 NucBoxG5上の通常PrometheusとGrafanaを使い、Grafanaだけを自宅LANとTailscaleへ公開しています。Prometheus・Node Exporter・Prometheus Agentは公開しません。AMPを固定PromQLで照会する読み取り専用APIは、Cognito OAuthのアクセストークンとホスト閲覧グループを検証してからJSONの診断結果を返します。このAPIをActionとして登録した[Linux Server Diagnostic GPT](https://chatgpt.com/g/g-6a53c4cf774481919948ee509a3e6cda-linux-server-diagnostic-gpt)から、`home-server`の現在の状態とCPU使用率を日本語で取得できることを確認しました。
@@ -41,6 +49,7 @@ Docker（host network）
 | `local-observability/` | ローカルPrometheus・GrafanaのCompose、設定、ダッシュボード |
 | `infrastructure/` | AWSリソースのIaC |
 | `lambda/` | 診断用API Lambdaとテスト |
+| `lambda/mcp_api/` | プラグイン向け認証付きMCP Lambda（OAuth接続設定中） |
 | `grafana/dashboards/` | Grafanaダッシュボード定義 |
 | `custom-gpt/` | Actions用OpenAPIスキーマとInstructions |
 

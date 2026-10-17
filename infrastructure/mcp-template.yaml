@@ -1,0 +1,177 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Linux monitoring - authenticated read-only MCP for ChatGPT plugins
+
+Parameters:
+  AmpWorkspaceArn:
+    Type: String
+  AmpWorkspaceId:
+    Type: String
+  CognitoUserPoolId:
+    Type: String
+  CognitoDomainUrl:
+    Type: String
+    Description: Existing Cognito managed login HTTPS origin, without trailing slash.
+    AllowedPattern: '^https://[a-z0-9.-]+$'
+  PluginOAuthCallbackUrl:
+    Type: String
+    Description: Exact callback URL shown in the ChatGPT custom MCP management page.
+    Default: ''
+    AllowedPattern: '^$|^https://chatgpt\.com/connector/oauth/[A-Za-z0-9_-]+$'
+
+Conditions:
+  HasCallback: !Not [!Equals [!Ref PluginOAuthCallbackUrl, '']]
+
+Resources:
+  McpHttpApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: !Sub '${AWS::StackName}-http'
+      ProtocolType: HTTP
+
+  McpStage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId: !Ref McpHttpApi
+      StageName: '$default'
+      AutoDeploy: true
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: 5
+        ThrottlingRateLimit: 2
+
+  McpIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref McpHttpApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !GetAtt McpFunction.Arn
+      PayloadFormatVersion: '2.0'
+      TimeoutInMillis: 29000
+
+  McpPostRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref McpHttpApi
+      RouteKey: 'POST /mcp'
+      Target: !Sub 'integrations/${McpIntegration}'
+  McpGetRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref McpHttpApi
+      RouteKey: 'GET /mcp'
+      Target: !Sub 'integrations/${McpIntegration}'
+  ResourceMetadataRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref McpHttpApi
+      RouteKey: 'GET /.well-known/oauth-protected-resource/mcp'
+      Target: !Sub 'integrations/${McpIntegration}'
+  AuthorizationMetadataRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref McpHttpApi
+      RouteKey: 'GET /.well-known/oauth-authorization-server'
+      Target: !Sub 'integrations/${McpIntegration}'
+
+  McpInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref McpFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${McpHttpApi}/*/*/*'
+
+  McpResourceServer:
+    Type: AWS::Cognito::UserPoolResourceServer
+    Properties:
+      UserPoolId: !Ref CognitoUserPoolId
+      Identifier: !Sub 'https://${McpHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/mcp'
+      Name: Linux Monitoring MCP
+      Scopes:
+        - ScopeName: status.read
+          ScopeDescription: Read home-server monitoring status via MCP.
+
+  McpClient:
+    Condition: HasCallback
+    Type: AWS::Cognito::UserPoolClient
+    DependsOn: McpResourceServer
+    Properties:
+      UserPoolId: !Ref CognitoUserPoolId
+      ClientName: !Sub '${AWS::StackName}-chatgpt'
+      GenerateSecret: true
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthFlows: [code]
+      AllowedOAuthScopes:
+        - !Sub 'https://${McpHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/mcp/status.read'
+      CallbackURLs: [!Ref PluginOAuthCallbackUrl]
+      SupportedIdentityProviders: [COGNITO]
+      AccessTokenValidity: 1
+      RefreshTokenValidity: 7
+      TokenValidityUnits:
+        AccessToken: hours
+        RefreshToken: days
+      EnableTokenRevocation: true
+      PreventUserExistenceErrors: ENABLED
+
+  McpLoginBranding:
+    Condition: HasCallback
+    Type: AWS::Cognito::ManagedLoginBranding
+    Properties:
+      ClientId: !Ref McpClient
+      UserPoolId: !Ref CognitoUserPoolId
+      UseCognitoProvidedValues: true
+
+  McpLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${AWS::StackName}-mcp'
+      RetentionInDays: 14
+
+  McpRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: {Service: lambda.amazonaws.com}
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: read-monitoring-only
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: aps:QueryMetrics
+                Resource: !Ref AmpWorkspaceArn
+              - Effect: Allow
+                Action: [logs:CreateLogStream, logs:PutLogEvents]
+                Resource: !Sub '${McpLogGroup.Arn}:*'
+
+  McpFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-mcp'
+      CodeUri: ../lambda/
+      Handler: mcp_api.handler.lambda_handler
+      Runtime: python3.12
+      Architectures: [x86_64]
+      Timeout: 28
+      MemorySize: 512
+      Role: !GetAtt McpRole.Arn
+      Environment:
+        Variables:
+          COGNITO_ISSUER: !Sub 'https://cognito-idp.${AWS::Region}.amazonaws.com/${CognitoUserPoolId}'
+          COGNITO_CLIENT_ID: !If [HasCallback, !Ref McpClient, 'connection-not-configured']
+          COGNITO_DOMAIN_URL: !Ref CognitoDomainUrl
+          MCP_RESOURCE_URL: !Sub 'https://${McpHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/mcp'
+          AMP_QUERY_ENDPOINT: !Sub 'https://aps-workspaces.${AWS::Region}.amazonaws.com/workspaces/${AmpWorkspaceId}'
+
+Outputs:
+  McpUrl:
+    Value: !Sub 'https://${McpHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/mcp'
+  OAuthClientId:
+    Condition: HasCallback
+    Value: !Ref McpClient
+  OAuthScope:
+    Value: !Sub 'https://${McpHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/mcp/status.read'

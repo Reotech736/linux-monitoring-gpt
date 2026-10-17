@@ -2,6 +2,15 @@
 
 ## 現在地
 
+2026-10-17追記：プラグイン移行後はAPIツールがなく、ChatGPTから取得できない状態。
+AMPの`up=1`は再確認した。MCPでの復旧実装・テスト・SAMテンプレートを準備し、
+MCP基盤のデプロイと認証メタデータ・未認証拒否を確認済み。
+専用Cognito clientとcallback URL登録は完了。ChatGPT側の登録が旧スコープ
+`linux-monitoring/status.read`を保持したためOAuth接続は`invalid_scope`で失敗した。
+当該登録はアンインストール済みだが、ChatGPT側の既知の409競合により削除できず、
+修復または削除対応を待っている。[移行作業](plugin-mcp-migration.md)を参照。
+以下は従来のCustom GPTでの到達点を記録したもの。
+
 Phase 6まで完了しています。自宅LinuxホストのメトリクスをAWSへ転送・保存し、ローカルGrafanaと、Cognito OAuthで認証されたCustom GPTの両方から状態を確認できます。
 
 ```text

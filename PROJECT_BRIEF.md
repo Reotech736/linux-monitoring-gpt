@@ -12,6 +12,11 @@ Phaseごとの実装結果は[docs/progress-summary.md](docs/progress-summary.md
 
 ## 現在の対象と到達点
 
+- 2026-10-17追記：プラグイン移行後にActions接続が欠落し、ChatGPTから監視値を取得できない。
+  AMPの`up=1`は再確認済み。復旧用MCP基盤はデプロイ済みで、ChatGPT側のOAuth接続設定待ち。
+  当面は[プラグイン接続の復旧](docs/plugin-mcp-migration.md)を優先し、その後Phase 7へ進む。
+  以下のPhase 6完了は従来のCustom GPTについての記録。
+
 - 監視対象は`home-server`だけです。
 - Phase 6まで完了しています。招待済みユーザーがCognito OAuthで認証後、Custom GPTから対象ホストの確認とCPUを含む現在の診断結果を取得できることを確認済みです。
 - 警告、監視停止、メトリクス欠損時のGPT応答は、安全な再現方法を決めてから検証します。
