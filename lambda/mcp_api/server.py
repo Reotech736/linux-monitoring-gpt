@@ -1,6 +1,7 @@
 """Cognito認証付きの読み取り専用MCP。既存の固定PromQL診断処理を共有する。"""
 
 import asyncio
+import logging
 import os
 from dataclasses import dataclass
 from typing import Literal
@@ -19,6 +20,7 @@ from starlette.responses import JSONResponse
 from status_api.app import AmpQueryClient, build_status
 
 GROUP = "monitoring-viewer-home-server"
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -29,6 +31,7 @@ class Settings:
     amp_endpoint: str
     cognito_domain: str
     region: str = "ap-northeast-1"
+    authorized_subject: str = ""
 
     @classmethod
     def from_env(cls):
@@ -39,6 +42,7 @@ class Settings:
             amp_endpoint=os.environ["AMP_QUERY_ENDPOINT"],
             cognito_domain=os.environ["COGNITO_DOMAIN_URL"],
             region=os.environ.get("AWS_REGION", "ap-northeast-1"),
+            authorized_subject=os.environ.get("AUTHORIZED_USER_SUB", ""),
         )
 
     def __post_init__(self):
@@ -77,20 +81,52 @@ class CognitoVerifier:
             )
             groups = claims.get("cognito:groups", [])
             scope = claims["scope"]
+            subject_allowed = (
+                isinstance(groups, list) and GROUP in groups
+            ) or (
+                bool(self.settings.authorized_subject)
+                and claims["sub"] == self.settings.authorized_subject
+            )
             if (
                 claims["token_use"] != "access"
                 or claims["client_id"] != self.settings.client_id
-                or not isinstance(groups, list) or GROUP not in groups
+                or not subject_allowed
                 or not isinstance(scope, str) or self.settings.scope not in scope.split()
             ):
+                logger.warning(
+                    "Access token claims rejected: token_use=%s client_id=%s subject_allowed=%s scope=%s "
+                    "groups_present=%s groups_type=%s username_present=%s origin_jti_present=%s sub_is_client=%s",
+                    claims.get("token_use") == "access",
+                    claims.get("client_id") == self.settings.client_id,
+                    subject_allowed,
+                    isinstance(scope, str) and self.settings.scope in scope.split(),
+                    "cognito:groups" in claims,
+                    type(groups).__name__,
+                    "username" in claims or "cognito:username" in claims,
+                    "origin_jti" in claims,
+                    claims.get("sub") == claims.get("client_id"),
+                )
                 return None
             return AccessToken(
                 token=token, client_id=claims["client_id"], scopes=scope.split(),
                 expires_at=claims["exp"], resource=self.settings.resource,
                 subject=claims["sub"],
             )
-        except (jwt.PyJWTError, ValueError, TypeError, KeyError, OSError):
+        except jwt.ExpiredSignatureError:
+            logger.warning("Access token rejected: expired")
+            return None
+        except jwt.InvalidIssuerError:
+            logger.warning("Access token rejected: invalid issuer")
+            return None
+        except jwt.InvalidAudienceError:
+            logger.warning("Access token rejected: invalid audience")
+            return None
+        except jwt.MissingRequiredClaimError as exc:
+            logger.warning("Access token rejected: missing required claim %s", exc.claim)
+            return None
+        except (jwt.PyJWTError, ValueError, TypeError, KeyError, OSError) as exc:
             # JWTや例外本文をログに残さない。
+            logger.warning("Access token rejected: %s", type(exc).__name__)
             return None
 
     async def verify_token(self, token: str) -> AccessToken | None:

@@ -18,6 +18,11 @@ Parameters:
     Description: Exact callback URL shown in the ChatGPT custom MCP management page.
     Default: ''
     AllowedPattern: '^$|^https://chatgpt\.com/connector/oauth/[A-Za-z0-9_-]+$'
+  AuthorizedUserSub:
+    Type: String
+    Description: Exact Cognito user sub permitted when the access token omits cognito:groups.
+    Default: ''
+    AllowedPattern: '^$|^[A-Za-z0-9_-]{1,128}$'
 
 Conditions:
   HasCallback: !Not [!Equals [!Ref PluginOAuthCallbackUrl, '']]
@@ -35,9 +40,38 @@ Resources:
       ApiId: !Ref McpHttpApi
       StageName: '$default'
       AutoDeploy: true
+      AccessLogSettings:
+        DestinationArn: !GetAtt McpAccessLogGroup.Arn
+        Format: >-
+          {"requestId":"$context.requestId","routeKey":"$context.routeKey","status":"$context.status","integrationStatus":"$context.integration.status","error":"$context.error.message","integrationError":"$context.integrationErrorMessage"}
       DefaultRouteSettings:
         ThrottlingBurstLimit: 5
         ThrottlingRateLimit: 2
+
+  McpAccessLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/apigateway/${AWS::StackName}-mcp-access'
+      RetentionInDays: 7
+
+  McpAccessLogPolicy:
+    Type: AWS::Logs::ResourcePolicy
+    Properties:
+      PolicyName: !Sub '${AWS::StackName}-mcp-access'
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowApiGatewayLogDelivery
+            Effect: Allow
+            Principal:
+              Service: delivery.logs.amazonaws.com
+            Action: [logs:CreateLogStream, logs:PutLogEvents]
+            Resource: !Sub '${McpAccessLogGroup.Arn}:log-stream:*'
+            Condition:
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+              ArnLike:
+                aws:SourceArn: !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:*'
 
   McpIntegration:
     Type: AWS::ApiGatewayV2::Integration
@@ -164,6 +198,7 @@ Resources:
           COGNITO_ISSUER: !Sub 'https://cognito-idp.${AWS::Region}.amazonaws.com/${CognitoUserPoolId}'
           COGNITO_CLIENT_ID: !If [HasCallback, !Ref McpClient, 'connection-not-configured']
           COGNITO_DOMAIN_URL: !Ref CognitoDomainUrl
+          AUTHORIZED_USER_SUB: !Ref AuthorizedUserSub
           MCP_RESOURCE_URL: !Sub 'https://${McpHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/mcp'
           AMP_QUERY_ENDPOINT: !Sub 'https://aps-workspaces.${AWS::Region}.amazonaws.com/workspaces/${AmpWorkspaceId}'
 

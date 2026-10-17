@@ -102,6 +102,29 @@ class McpTests(unittest.TestCase):
             self.assertEqual(self.call(client, "tools/list", token=token).status_code, 401)
         self.assertEqual(self.amp.calls, [])
 
+    def test_exact_subject_can_authorize_when_cognito_omits_groups(self):
+        settings = Settings(
+            self.settings.issuer,
+            self.settings.client_id,
+            self.settings.resource,
+            self.settings.amp_endpoint,
+            self.settings.cognito_domain,
+            authorized_subject=self.claims["sub"],
+        )
+        verifier = CognitoVerifier(settings)
+        with patch.object(
+            verifier.jwks,
+            "get_signing_key_from_jwt",
+            return_value=SimpleNamespace(key=self.key.public_key()),
+        ):
+            server = create_server(settings, verifier=verifier, query_client=self.amp)
+            token = self.token(**{"cognito:groups": []})
+            with TestClient(server.streamable_http_app(), base_url="https://monitor.example") as client:
+                response = self.call(client, "tools/list", token=token)
+                self.assertEqual(response.status_code, 200)
+                wrong_user = self.token(sub="another-user", **{"cognito:groups": []})
+                self.assertEqual(self.call(client, "tools/list", token=wrong_user).status_code, 401)
+
     def test_invalid_host_and_unknown_tool_cannot_query_amp(self):
         with TestClient(self.server().streamable_http_app(), base_url="https://monitor.example") as client:
             for name, host in [("getHostStatus", "other-host"), ("runShell", "home-server")]:

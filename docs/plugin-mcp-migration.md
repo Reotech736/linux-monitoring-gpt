@@ -2,22 +2,16 @@
 
 ## 現在地
 
-2026-10-17時点で、移行済みプラグインには診断用の指示文だけがあり、
-`getHostStatus`を実行する接続がないことを確認した。
-既存の診断APIは未認証リクエストに401を返し、AMPへの読み取りクエリでは
-`up{host_id="home-server",job="node-exporter"}=1`を確認した。
-AWSへの収集経路はこの確認時点で稼働している。
-
-MCP実装、認証テスト、SAMテンプレートを追加し、利用者の承認後に基盤をデプロイした。
-**callback URL登録・専用OAuth client作成は完了。ChatGPT側へのClient ID/Secret設定後、OAuth接続は`invalid_scope`で失敗し、実データ取得は未完了。**
-15件のテスト、依存関係の整合性、SAM lintとbuildは成功済み。
+2026-10-18時点で、ブラウザ版ChatGPTの`Linux Server Monitoring`から
+Cognito OAuth認証、MCP初期化、ツール検出、`getHostStatus`によるAMP実データ取得まで成功した。
+16件のテスト、依存関係の整合性、SAM lintとbuildは成功済み。
 
 ChatGPT側の登録は作成時に取得した旧スコープ`linux-monitoring/status.read`を要求していた。
 現在のOAuthメタデータが公開するMCP専用スコープは
 `https://gcomsdpwrh.execute-api.ap-northeast-1.amazonaws.com/mcp/status.read`であり、両者が一致しない。
-登録はアンインストール済みだが、削除時にHTTP 409
+旧登録はアンインストール済みだが、削除時にHTTP 409
 `Remove this app from the published plugin before deleting it.`が返る既知の不具合があり、
-OpenAI側の修復または削除対応を待つ。削除不能な登録を増やさないため、追加登録は作成しない。
+OpenAI側の修復または削除対応を待つ。現行の`Linux Server Monitoring`は別登録で正常稼働している。
 
 デプロイ結果（2026-10-17）：
 
@@ -28,10 +22,11 @@ OpenAI側の修復または削除対応を待つ。削除不能な登録を増�
 - GET /mcpはHTTP 405。
 - 利用者から指定されたcallback URLを登録し、専用Cognito clientとbrandingを作成済み。
 - client名: `linux-monitoring-gpt-mcp-chatgpt`。Secretはチャット・ファイルへ表示／保存せず、利用者の環境で取得してChatGPTへ設定する。
-- MCP専用Resource Serverとスコープを追加済み。resource・S256 PKCE付き認可要求がエラーなく`/login`へ遷移することを確認。ユーザーのログイン完了は別途必要。
+- MCP専用Resource Serverとスコープを追加済み。resource・S256 PKCE付き認可、コード交換、接続完了を確認。
 - SAM成果物は既存のSAM管理バケットの`linux-monitoring-gpt-mcp/`に配置。
-- 2026-10-17の再確認でスタックは`UPDATE_COMPLETE`、公開メタデータはHTTP 200、未認証POSTはHTTP 401、ローカルテスト15件は成功。
-元GPTの退役日と、この接続不足は別の問題として扱う。
+- 2026-10-18の再確認でスタックは`UPDATE_COMPLETE`。認証後のinitialize、tools/list、tools/callはHTTP 200、初期化通知はHTTP 202。
+- Cognitoの実アクセストークンで`cognito:groups`が省略されたため、署名・issuer・audience・client ID・scopeに加え、設定した単一ユーザーの不変な`sub`を検証する代替認可を追加した。
+- 旧Custom GPTは2026年12月11日の退役後に削除を確認する。
 
 ## 構成
 
@@ -61,19 +56,21 @@ MCP側でRFC 8414のOAuthメタデータを公開し、ログイン・token・re
 既存Cognitoへ向ける。認証コードやClient SecretをこのLambdaへ送る設計ではない。
 OAuthメタデータのissuerはMCP origin（末尾`/`付き）、JWT検証のissuerは
 実際のCognito User Pool URLと明確に分離する。両方ともサーバ設定で固定する。
-これは独自のメタデータ補完実装であり、ChatGPTとの実接続は公開後に検証する。
+これは独自のメタデータ補完実装であり、ChatGPTとの実接続まで検証済み。
 
 - `/.well-known/oauth-protected-resource/mcp`：resource、認可サーバー、scope。
 - `/.well-known/oauth-authorization-server`：Cognitoのエンドポイント、S256、認証方式。
 - OIDC、CIMD、DCR、RFC 9207の対応は宣言しない。事前登録したOAuthクライアントを使う。
 - 要求スコープは`<MCP URL>/status.read`のみ。ID tokenや個人情報は要求しない。
+- 認可は専用client ID、resource、scopeに加え、`cognito:groups`または設定した単一ユーザーの
+  不変な`sub`を検証する。Cognitoがグループクレームを省略した場合も対象ユーザー以外は許可しない。
 - コールバックはChatGPTの管理画面に表示された正確な`https://chatgpt.com/connector/oauth/...`を登録する。
   古いGPT Action用URLや推測したcallback IDは使わない。
 
 ### 検証項目
 
 Lambda内でRS256署名、Cognito issuer、有効期限、発行時刻、MCP URL宛ての`aud`、
-専用`client_id`、`token_use=access`、scope、`monitoring-viewer-home-server`グループを検証する。
+専用`client_id`、`token_use=access`、scope、`monitoring-viewer-home-server`グループまたは設定済み単一ユーザーの`sub`を検証する。
 署名鍵は設定済みCognitoのJWKSだけから取得する。任意URLをクライアント入力から受け取らない。
 
 `resource`指定でCognitoがMCP URLを`aud`に含めたaccess tokenだけを受け付ける。
@@ -133,8 +130,8 @@ Lambdaの繰り返し呼び出しを確認する。実際のCognitoログイン�
    値を出力せず確認した。利用者の環境で取得してクリップボードへ直接渡し、
    ChatGPTのSecret欄へ貼り付ける。チャット・リポジトリ・エージェントの出力に値を残さない。
 6. 招待済みユーザーでログインし、`getHostStatus`の検出と`home-server`の実データを確認する。
-7. 既存の診断指示プラグインと新しいMCP接続プラグインを同じチャットで利用する。
-   MCP側にも基本の日本語説明指示を含めている。
+7. 新しいチャットで`Linux Server Monitoring`を選択し、`home-server`の状態確認を依頼する。
+   MCP側のserver instructionsにも基本の日本語説明指示を含めている。
 8. トークン期限後の再認証、グループ未所属、別ホスト、欠損、API失敗を検証する。
    metadataやツールを変えたら接続をRefreshし、新しいチャットで再確認する。
 

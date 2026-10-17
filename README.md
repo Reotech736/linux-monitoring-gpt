@@ -1,22 +1,20 @@
-# Linux Server Monitoring GPT
+# Linux Server Monitoring
 
-自宅Linuxサーバの状態をPrometheus形式で収集し、AWSへ安全に転送・保存するPoCです。最終的には、診断用REST APIを経由してカスタムGPTがサーバ状態を日本語で説明できるようにします。
+自宅Linuxサーバの状態をPrometheus形式で収集し、AWSへ安全に転送・保存するPoCです。ChatGPTでは、読み取り専用MCPプラグインを通じてサーバ状態を日本語で説明します。
 
 目的、現行設計、運用上の制約は [PROJECT_BRIEF.md](PROJECT_BRIEF.md) を参照してください。Phaseごとの実装結果と未検証項目は [docs/progress-summary.md](docs/progress-summary.md) にまとめています。
 
 ## 現在のステータス
 
-2026-10-17追記：移行済みプラグインにはCustom GPT Actionsが引き継がれておらず、監視値を取得できません。
-AMPでの`up=1`は再確認済みです。復旧用の認証付きMCP実装とAWSテンプレートを準備し、
-15件のテストとSAMビルドを通過し、MCP基盤をAWSへデプロイしました。
-認証メタデータのHTTP 200と未認証アクセスのHTTP 401を確認済みです。
-専用Cognito clientとcallback URL登録まで完了し、ChatGPT側の資格情報設定・OAuth接続・実データ取得を確認中です。
+2026-10-18追記：ブラウザ版ChatGPTに`Linux Server Monitoring`プラグインを登録し、
+Cognito OAuth認証、MCPの初期化・ツール検出、`getHostStatus`によるAMP実データ取得まで確認しました。
+旧登録`Linux Monitoring MCP`はアンインストール済みですが、ChatGPT側のHTTP 409不具合により削除待ちです。
 設計・認証・公開手順は[プラグイン移行](docs/plugin-mcp-migration.md)を参照してください。
 以下のPhase 6完了は従来のCustom GPTについての確認記録です。
 
 Phase 6（共有GPT向けOAuth認可）まで完了しています。Node Exporterを`127.0.0.1:9100`でsystemdサービスとして実行し、Docker Compose上のPrometheus Agentが収集したメトリクスを、東京リージョンのAmazon Managed Service for Prometheus（AMP）へ転送しています。AMPのQuery APIで`up{host_id="home-server"}`が`1`になることを確認済みです。
 
-NucBoxG5上の通常PrometheusとGrafanaを使い、Grafanaだけを自宅LANとTailscaleへ公開しています。Prometheus・Node Exporter・Prometheus Agentは公開しません。AMPを固定PromQLで照会する読み取り専用APIは、Cognito OAuthのアクセストークンとホスト閲覧グループを検証してからJSONの診断結果を返します。このAPIをActionとして登録した[Linux Server Diagnostic GPT](https://chatgpt.com/g/g-6a53c4cf774481919948ee509a3e6cda-linux-server-diagnostic-gpt)から、`home-server`の現在の状態とCPU使用率を日本語で取得できることを確認しました。
+NucBoxG5上の通常PrometheusとGrafanaを使い、Grafanaだけを自宅LANとTailscaleへ公開しています。Prometheus・Node Exporter・Prometheus Agentは公開しません。AMPを固定PromQLで照会する読み取り専用MCPは、Cognito OAuthのアクセストークン、専用スコープ、対象ユーザーを検証します。ChatGPTの`Linux Server Monitoring`から、`home-server`の到達状況、CPU・メモリ・ディスク使用率、ロード、稼働時間、アラートを日本語で取得できます。
 
 公開文書の入口は [GitHub Pages](https://reotech736.com/linux-monitoring-gpt/) です。Custom GPTのPrivacy policy URLには [プライバシーポリシー](https://reotech736.com/linux-monitoring-gpt/privacy-policy.html) を設定します。
 
@@ -49,7 +47,7 @@ Docker（host network）
 | `local-observability/` | ローカルPrometheus・GrafanaのCompose、設定、ダッシュボード |
 | `infrastructure/` | AWSリソースのIaC |
 | `lambda/` | 診断用API Lambdaとテスト |
-| `lambda/mcp_api/` | プラグイン向け認証付きMCP Lambda（OAuth接続設定中） |
+| `lambda/mcp_api/` | プラグイン向け認証付きMCP Lambda |
 | `grafana/dashboards/` | Grafanaダッシュボード定義 |
 | `custom-gpt/` | Actions用OpenAPIスキーマとInstructions |
 
@@ -71,7 +69,7 @@ Phase 2の具体的な認証、CloudFormation、Agent接続、削除手順は [d
 
 AMPを固定PromQLで読み取り、診断用JSONへ整形するAPIの設計・検証・デプロイ手順は [docs/phase4-diagnostic-api.md](docs/phase4-diagnostic-api.md) を参照してください。認証はPhase 6でCognito OAuthへ移行済みです。
 
-## Phase 5のCustom GPT連携
+## Phase 5のCustom GPT連携（履歴）
 
 Custom GPT Actions用のOpenAPIスキーマ、Instructions、ChatGPT画面での安全な設定・テスト手順は [docs/phase5-custom-gpt-actions.md](docs/phase5-custom-gpt-actions.md) を参照してください。
 
