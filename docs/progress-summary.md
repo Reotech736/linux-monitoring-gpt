@@ -5,7 +5,8 @@
 2026-10-18追記：ブラウザ版ChatGPTに`Linux Server Monitoring`をカスタムMCPサーバーとして登録し、
 Cognito OAuth認証、MCP初期化、ツール検出、`getHostStatus`によるAMP実データ取得まで確認した。
 旧登録はアンインストール済みだが、ChatGPT側のHTTP 409競合により削除待ち。
-旧Custom GPTは2026年12月11日の退役後に消えたことを確認する。[移行作業](plugin-mcp-migration.md)を参照。
+旧Custom GPTは利用を終了し、そのAWS側REST APIと専用OAuthリソースを2026-10-18に削除した。
+[移行作業](plugin-mcp-migration.md)を参照。
 
 Phase 6とMCPプラグイン移行まで完了しています。自宅LinuxホストのメトリクスをAWSへ転送・保存し、ローカルGrafanaと、Cognito OAuthで認証されたChatGPTプラグインの両方から状態を確認できます。
 
@@ -37,7 +38,7 @@ ChatGPT plugin
 2026-07-14に、次の状態を確認しました。
 
 - CloudFormation stack `linux-monitoring-gpt-amp`は`CREATE_COMPLETE`。
-- SAM/CloudFormation stack `linux-monitoring-gpt-diagnostic-api`は`UPDATE_COMPLETE`。
+- CloudFormation stack `linux-monitoring-gpt-diagnostic-api`は共有Cognito基盤だけを保持する。
 - アカウント全体Budget `aws-account-monthly-cost`は月額US$20、`HEALTHY`。
 - Prometheus Agent、ローカルPrometheus、Grafanaの各コンテナは稼働中。
 - 診断API stackはCognito OAuthを有効化済み。未認証の`GET /hosts/home-server/status`がHTTP 401で拒否されることを確認。

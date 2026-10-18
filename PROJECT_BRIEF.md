@@ -19,7 +19,7 @@ Phaseごとの実装結果は[docs/progress-summary.md](docs/progress-summary.md
 - 監視対象は`home-server`だけです。
 - Phase 6とMCPプラグイン移行まで完了しています。招待済みユーザーがCognito OAuthで認証後、ChatGPTから現在の診断結果を取得できます。
 - 警告、監視停止、メトリクス欠損時のGPT応答は、安全な再現方法を決めてから検証します。
-- 共有GPT向けの初期認可としてCognito OAuth、JWT Authorizer、`home-server`閲覧グループを運用します。複数ホスト・複数利用者のデータ分離は次段階の対象です。設計は[docs/phase6-public-access-design.md](docs/phase6-public-access-design.md)に記録しています。
+- ChatGPTプラグイン向けの認可としてCognito OAuth、MCP側のJWT検証、`home-server`閲覧グループを運用します。複数ホスト・複数利用者のデータ分離は次段階の対象です。設計は[docs/plugin-mcp-migration.md](docs/plugin-mcp-migration.md)に記録しています。
 
 ## 現行構成
 

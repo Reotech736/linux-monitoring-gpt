@@ -1,0 +1,66 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Linux Server Monitoring - shared Cognito authentication foundation
+
+Metadata:
+  ResourceTags:
+    Project: linux-monitoring-gpt
+    Environment: poc
+    ManagedBy: cloudformation
+    Component: shared-auth
+
+Parameters:
+  CognitoDomainPrefix:
+    Type: String
+    Description: Globally unique prefix for the Cognito managed login domain.
+    AllowedPattern: '^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$'
+
+Resources:
+  CognitoUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub '${AWS::StackName}-users'
+      UsernameAttributes:
+        - email
+      AutoVerifiedAttributes:
+        - email
+      AdminCreateUserConfig:
+        AllowAdminCreateUserOnly: true
+      MfaConfiguration: 'OFF'
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 14
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: true
+          RequireUppercase: true
+          TemporaryPasswordValidityDays: 7
+      UserPoolTags:
+        Project: linux-monitoring-gpt
+        Environment: poc
+        ManagedBy: cloudformation
+        Component: shared-auth
+
+  CognitoUserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      Domain: !Ref CognitoDomainPrefix
+      ManagedLoginVersion: 2
+      UserPoolId: !Ref CognitoUserPool
+
+  HomeServerViewerGroup:
+    Type: AWS::Cognito::UserPoolGroup
+    Properties:
+      GroupName: monitoring-viewer-home-server
+      Description: Users allowed to view the home-server monitoring status.
+      UserPoolId: !Ref CognitoUserPool
+
+Outputs:
+  CognitoUserPoolId:
+    Description: Shared Cognito User Pool used by the MCP plugin.
+    Value: !Ref CognitoUserPool
+  CognitoIssuer:
+    Description: JWT issuer used by the MCP plugin.
+    Value: !Sub 'https://cognito-idp.${AWS::Region}.amazonaws.com/${CognitoUserPool}'
+  CognitoDomainUrl:
+    Description: Managed login origin used by the MCP plugin.
+    Value: !Sub 'https://${CognitoDomainPrefix}.auth.${AWS::Region}.amazoncognito.com'

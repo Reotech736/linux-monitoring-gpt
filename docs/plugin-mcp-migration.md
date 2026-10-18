@@ -13,6 +13,10 @@ ChatGPT側の登録は作成時に取得した旧スコープ`linux-monitoring/s
 `Remove this app from the published plugin before deleting it.`が返る既知の不具合があり、
 OpenAI側の修復または削除対応を待つ。現行の`Linux Server Monitoring`は別登録で正常稼働している。
 
+共有Cognito基盤は`infrastructure/shared-auth-template.yaml`で、MCP本体は
+`infrastructure/mcp-template.yaml`で管理する。旧Custom GPT専用の設定ファイルと手順書は、
+AWSリソースの退役に合わせてリポジトリから削除した。
+
 デプロイ結果（2026-10-17）：
 
 - `linux-monitoring-gpt-mcp`: `UPDATE_COMPLETE`。
@@ -26,7 +30,9 @@ OpenAI側の修復または削除対応を待つ。現行の`Linux Server Monito
 - SAM成果物は既存のSAM管理バケットの`linux-monitoring-gpt-mcp/`に配置。
 - 2026-10-18の再確認でスタックは`UPDATE_COMPLETE`。認証後のinitialize、tools/list、tools/callはHTTP 200、初期化通知はHTTP 202。
 - Cognitoの実アクセストークンで`cognito:groups`が省略されたため、署名・issuer・audience・client ID・scopeに加え、設定した単一ユーザーの不変な`sub`を検証する代替認可を追加した。
-- 旧Custom GPTは2026年12月11日の退役後に削除を確認する。
+- 旧Custom GPTは今後利用しない方針とし、2026-10-18に旧REST API、Lambda、OAuth client、
+  Resource Server、Managed Login BrandingをAWSから削除した。共有User Pool、ドメイン、
+  閲覧グループは現行MCPの認証基盤として保持している。
 
 ## 構成
 
@@ -43,7 +49,8 @@ ChatGPTのプラグイン
 - ツールは`getHostStatus(host_id="home-server")`だけ。入力ホストはLiteral型で制限する。
 - 既存REST APIのトークンを転送するプロキシではない。既存の固定PromQL・診断整形処理をコードとして再利用する。
 - MCP Lambdaは専用IAMロールでAMPを読む。認証済みリクエスト以外からは問い合わせない。
-- 既存のAMP、Agent、Grafana、REST API、GPT用OAuthクライアントは変更しない。
+- 既存のAMP、Agent、Grafana、共有Cognito基盤は変更しない。旧REST APIとGPT用OAuth
+  クライアントは移行完了後に削除した。
 
 ## 認証
 
@@ -76,7 +83,7 @@ Lambda内でRS256署名、Cognito issuer、有効期限、発行時刻、MCP URL
 `resource`指定でCognitoがMCP URLを`aud`に含めたaccess tokenだけを受け付ける。
 実環境の認可エンドポイントで、従来の`linux-monitoring/status.read`はresource binding時に
 `invalid_request`となることを確認した。MCP URL専用のResource Serverとスコープを追加し、
-従来APIのスコープは変更しない。
+旧REST APIのスコープとは分離する。
 旧GPT用トークンやID tokenへのフォールバックは行わない。グループ変更・失効の反映には
 発行済みJWTの有効期間が影響するため、access tokenは1時間に設定する。
 
